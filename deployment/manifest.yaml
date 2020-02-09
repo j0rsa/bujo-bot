@@ -8,6 +8,7 @@ metadata:
 data:
   BUJO_URL: "http://bujo-tracker.bujo-prod.svc.cluster.local"
   LOG_LEVEL: DEBUG
+  HTTP_LOG_LEVEL: BODY
 
 ---
 apiVersion: apps/v1

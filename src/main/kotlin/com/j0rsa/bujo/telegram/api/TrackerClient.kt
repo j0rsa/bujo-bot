@@ -22,19 +22,22 @@ import org.http4k.core.Status
 import org.http4k.core.Uri
 import org.slf4j.LoggerFactory.getLogger
 
+
 /**
  * @author red
  * @since 02.02.20
  */
 
 object TrackerClient {
-    private val logger = getLogger(this::javaClass.name)
-    private val logging = HttpLoggingInterceptor().apply {
-        setLevel(HttpLoggingInterceptor.Level.BASIC);
-    }
+    private val logger = getLogger(this::class.java.name)
+    var httpLogging = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
+        override fun log(message: String) {
+            logger.debug(message)
+        }
+    }).apply { setLevel(HttpLoggingInterceptor.Level.valueOf(Config.app.httpLoggingLevel)) }
     private val client = OkHttp(OkHttpClient.Builder()
         .followRedirects(false)
-        .addInterceptor(logging)
+        .addInterceptor(httpLogging)
         .build())
     fun health(): Boolean =
         client("/health".get()).status == Status.OK
@@ -71,16 +74,4 @@ object TrackerClient {
 
     private fun String.post() =
         Request(Method.POST, Uri.of(Config.app.tracker.url).path(this))
-
-    private fun RequestBody?.utf8String(): String =
-        this?.let {
-            val buffer = Buffer()
-            it.writeTo(buffer)
-            buffer.readUtf8()
-        } ?: ""
-
-    private fun ResponseBody?.utf8String(): String =
-        this?.let {
-            GzipSource(it.source()).buffer().readUtf8()
-        } ?: ""
 }

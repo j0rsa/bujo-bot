@@ -15,7 +15,8 @@ object Config {
 data class AppConfig(
     val token: String,
     val tracker: Tracker,
-    val defaultLanguage: String
+    val defaultLanguage: String,
+    val httpLoggingLevel: String
 )
 
 data class Tracker(
