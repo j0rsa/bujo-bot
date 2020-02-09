@@ -9,7 +9,12 @@ import com.j0rsa.bujo.telegram.api.RequestLens.telegramUserIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.userLens
 import com.j0rsa.bujo.telegram.api.model.*
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody
+import okhttp3.ResponseBody
+import okhttp3.logging.HttpLoggingInterceptor
 import okio.Buffer
+import okio.GzipSource
+import okio.buffer
 import org.http4k.client.OkHttp
 import org.http4k.core.Method
 import org.http4k.core.Request
@@ -24,14 +29,12 @@ import org.slf4j.LoggerFactory.getLogger
 
 object TrackerClient {
     private val logger = getLogger(this::javaClass.name)
+    private val logging = HttpLoggingInterceptor().apply {
+        setLevel(HttpLoggingInterceptor.Level.BASIC);
+    }
     private val client = OkHttp(OkHttpClient.Builder()
         .followRedirects(false)
-        .addInterceptor { chain -> chain.also {
-            val buffer = Buffer()
-            it.request().body?.writeTo(buffer)
-            val body = buffer.readUtf8()
-            logger.debug("Request:\n${it.request()}\nBody:\n$body")
-        }.proceed(chain.request()) }
+        .addInterceptor(logging)
         .build())
     fun health(): Boolean =
         client("/health".get()).status == Status.OK
@@ -69,4 +72,15 @@ object TrackerClient {
     private fun String.post() =
         Request(Method.POST, Uri.of(Config.app.tracker.url).path(this))
 
+    private fun RequestBody?.utf8String(): String =
+        this?.let {
+            val buffer = Buffer()
+            it.writeTo(buffer)
+            buffer.readUtf8()
+        } ?: ""
+
+    private fun ResponseBody?.utf8String(): String =
+        this?.let {
+            GzipSource(it.source()).buffer().readUtf8()
+        } ?: ""
 }
