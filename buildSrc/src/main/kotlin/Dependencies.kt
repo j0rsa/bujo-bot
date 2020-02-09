@@ -15,6 +15,8 @@ object Versions {
     const val http4k = "3.231.0"
     const val config4k = "0.4.2"
     const val coroutines = "1.3.3"
+    const val slf4j = "1.7.25"
+    const val logback = "1.2.3"
 
     /* plugins */
     const val gitProperties = "1.4.17"
@@ -32,6 +34,9 @@ object Libs {
     const val http4kFormat = "org.http4k:http4k-format-gson:${Versions.http4k}"
     const val config4k = "io.github.config4k:config4k:${Versions.config4k}"
     const val coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}"
+    const val slf4jApi = "org.slf4j:slf4j-api:${Versions.slf4j}"
+    const val logbackClassic = "ch.qos.logback:logback-classic:${Versions.logback}"
+    const val logbackCore = "ch.qos.logback:logback-core:${Versions.logback}"
 }
 
 

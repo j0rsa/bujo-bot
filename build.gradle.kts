@@ -24,6 +24,9 @@ dependencies {
     // workaround for https://github.com/kotlin-telegram-bot/kotlin-telegram-bot/pull/50
     implementation("com.squareup.okhttp3:logging-interceptor:4.3.1")
     implementation(Libs.coroutines)
+    implementation(Libs.slf4jApi)
+    implementation(Libs.logbackClassic)
+    implementation(Libs.logbackCore)
 
     testImplementation(TestLibs.junit)
 }

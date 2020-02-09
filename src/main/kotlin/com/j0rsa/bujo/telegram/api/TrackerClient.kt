@@ -1,7 +1,6 @@
 package com.j0rsa.bujo.telegram.api
 
 import com.j0rsa.bujo.telegram.Config
-import com.j0rsa.bujo.telegram.api.RequestLens.actionLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionRequestLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitLens
 import com.j0rsa.bujo.telegram.api.RequestLens.multipleHabitsLens
@@ -14,6 +13,7 @@ import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Status
 import org.http4k.core.Uri
+import org.slf4j.LoggerFactory.getLogger
 
 /**
  * @author red
@@ -21,13 +21,16 @@ import org.http4k.core.Uri
  */
 
 object TrackerClient {
+    private val logger = getLogger(this::javaClass.name)
     private val client = OkHttp()
     fun health(): Boolean =
         client("/health".get()).status == Status.OK
 
     fun createUser(userRequest: CreateUserRequest): Pair<UserId?, Status> {
+        val request = telegramUserCreateLens(userRequest, "/users".post())
+        logger.debug("Creating user: $request")
         val response = client(
-            telegramUserCreateLens(userRequest, "/users".post())
+            request
         )
         return if (response.status.code > 299) null to response.status else
             telegramUserIdLens(response) to response.status
