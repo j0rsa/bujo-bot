@@ -37,12 +37,12 @@ val projectTag = hash
 val baseDockerName = "j0rsa/${project.name}"
 val taggedDockerName = "$baseDockerName:$projectTag"
 
-val baseDockerFile = file("$projectDir/Dockerfile")
+val baseDockerFile = file("$projectDir/src/main/docker/Dockerfile")
 docker {
     val shadowJar: ShadowJar by tasks
     name = taggedDockerName
     setDockerfile(baseDockerFile)
-    tag("latest", taggedDockerName)
+    tag("DockerTag", "$baseDockerName:latest")
     buildArgs(mapOf("JAR_FILE" to shadowJar.archiveFileName.get()))
     files(shadowJar.outputs)
 }
