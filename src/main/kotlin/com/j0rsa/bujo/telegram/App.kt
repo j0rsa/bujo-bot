@@ -1,10 +1,10 @@
 package com.j0rsa.bujo.telegram
 
-import com.j0rsa.bujo.telegram.api.TrackerClient
-import com.j0rsa.bujo.telegram.monad.Reader
 import me.ivmg.telegram.bot
 import me.ivmg.telegram.dispatch
-import me.ivmg.telegram.dispatcher.text
+import me.ivmg.telegram.dispatcher.command
+import me.ivmg.telegram.entities.Message
+import me.ivmg.telegram.extensions.filters.Filter
 
 /**
  * @author red
@@ -13,13 +13,22 @@ import me.ivmg.telegram.dispatcher.text
 
 class App {
     fun run() {
-        bot {
+        val bot = bot {
             token = Config.app.token
             dispatch {
-                text { bot, update ->
+                command("start") { bot, udate ->
+                    BujoLogic.createTelegramUser(bot, udate)
 
                 }
+//                message(NotCommand) { bot, update -> BujoLogic.handleMessageInContext(bot, update) }
             }
+        }
+        bot.startPolling()
+    }
+
+    object NotCommand : Filter {
+        override fun Message.predicate(): Boolean {
+            return text != null && !text!!.startsWith("/")
         }
     }
 

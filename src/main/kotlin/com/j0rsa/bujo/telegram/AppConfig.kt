@@ -13,5 +13,11 @@ object Config {
 }
 
 data class AppConfig(
-    val token: String
+    val token: String,
+    val tracker: Tracker
+)
+
+data class Tracker(
+    val url: String,
+    val authHeader: String
 )

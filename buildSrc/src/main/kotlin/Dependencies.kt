@@ -11,9 +11,10 @@ object Plugins {
 
 object Versions {
     const val kotlin = "1.3.61"
-    const val telegramApi = "4.5.0"
+    const val telegramApi = "4.4.0"
     const val http4k = "3.231.0"
     const val config4k = "0.4.2"
+    const val coroutines = "1.3.3"
 
     /* plugins */
     const val gitProperties = "1.4.17"
@@ -30,6 +31,7 @@ object Libs {
     const val http4kClient = "org.http4k:http4k-client-okhttp:${Versions.http4k}"
     const val http4kFormat = "org.http4k:http4k-format-gson:${Versions.http4k}"
     const val config4k = "io.github.config4k:config4k:${Versions.config4k}"
+    const val coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}"
 }
 
 
