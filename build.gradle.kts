@@ -35,6 +35,13 @@ tasks {
     compileTestKotlin {
         kotlinOptions.jvmTarget = App.compileVersion
     }
+
+    named<ShadowJar>("shadowJar") {
+        mergeServiceFiles()
+        manifest {
+            attributes(mapOf("Main-Class" to "com.j0rsa.bujo.telegram.App"))
+        }
+    }
 }
 
 val hash = Runtime.getRuntime().exec("git rev-parse --short HEAD").inputStream.reader().use { it.readText() }.trim()
