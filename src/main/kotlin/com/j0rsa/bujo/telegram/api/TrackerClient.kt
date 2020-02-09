@@ -8,6 +8,8 @@ import com.j0rsa.bujo.telegram.api.RequestLens.telegramUserCreateLens
 import com.j0rsa.bujo.telegram.api.RequestLens.telegramUserIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.userLens
 import com.j0rsa.bujo.telegram.api.model.*
+import okhttp3.OkHttpClient
+import okio.Buffer
 import org.http4k.client.OkHttp
 import org.http4k.core.Method
 import org.http4k.core.Request
@@ -22,15 +24,21 @@ import org.slf4j.LoggerFactory.getLogger
 
 object TrackerClient {
     private val logger = getLogger(this::javaClass.name)
-    private val client = OkHttp()
+    private val client = OkHttp(OkHttpClient.Builder()
+        .followRedirects(false)
+        .addInterceptor { chain -> chain.also {
+            val buffer = Buffer()
+            it.request().body?.writeTo(buffer)
+            val body = buffer.readUtf8()
+            logger.debug("Request:\n${it.request()}\nBody:\n$body")
+        }.proceed(chain.request()) }
+        .build())
     fun health(): Boolean =
         client("/health".get()).status == Status.OK
 
     fun createUser(userRequest: CreateUserRequest): Pair<UserId?, Status> {
-        val request = telegramUserCreateLens(userRequest, "/users".post())
-        logger.debug("Creating user: $request")
         val response = client(
-            request
+            telegramUserCreateLens(userRequest, "/users".post())
         )
         return if (response.status.code > 299) null to response.status else
             telegramUserIdLens(response) to response.status
