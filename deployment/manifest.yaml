@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bujo-bot-config
+  namespace: bots
+  labels:
+    app: bujo-bot
+data:
+  BUJO_URL: "http://bujo-tracker.bujo-prod.svc.cluster.local"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bujo-bot
+  namespace: bots
+  labels:
+    app: bujo-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bujo-bot
+  template:
+    metadata:
+      labels:
+        app: bujo-bot
+    spec:
+      containers:
+        - name: bujo-bot
+          image: j0rsa/bujo-bot:latest
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: bujo-bot-config
+            - secretRef:
+                name: bujo-bot-secrets

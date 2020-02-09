@@ -2,7 +2,6 @@ package com.j0rsa.bujo.telegram
 
 import com.typesafe.config.ConfigFactory
 import io.github.config4k.extract
-import java.io.File
 
 /**
  * @author red
@@ -10,12 +9,10 @@ import java.io.File
  */
   
 object BujoTalk {
-    private val translactions = Language.values().map {
-        val lines = BujoTalk::class.java.classLoader
-            .getResource("i18n/${it.name.toLowerCase()}_lines.conf")
-            .file
-            .let { fileName -> File(fileName) }
-        it to ConfigFactory.parseFile(lines).extract<Lines>()
+    private val translations = Language.values().map {
+        val classLoader = BujoTalk::class.java.classLoader
+        val resourceName = "i18n/${it.name.toLowerCase()}_lines.conf"
+        it to ConfigFactory.parseResources(classLoader, resourceName).extract<Lines>()
     }.toMap()
 
     fun getSupportedLanguageCodesWithFlags(): List<Pair<Language, String>> =
@@ -31,7 +28,7 @@ object BujoTalk {
         } ?: Language.EN
 
     fun withLanguage(languageCode: String?): Lines =
-        translactions[getLanguage(languageCode)]!!
+        translations[getLanguage(languageCode)]!!
 }
 
 data class Lines(
