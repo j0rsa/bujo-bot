@@ -4,6 +4,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.actor
+import me.ivmg.telegram.Bot
 import java.lang.IllegalStateException
 
 /**
@@ -11,10 +12,10 @@ import java.lang.IllegalStateException
  * @since 09.02.20
  */
 
-object HabitActor {
+object HabitActor: Actor {
     @UseExperimental(ObsoleteCoroutinesApi::class)
-    fun yield(scope: CoroutineScope) = with(scope) {
-        actor<CreateHabitMessage> {
+    override fun yield(scope: CoroutineScope, bot: Bot, chatId: Long, userId: Long) = with(scope) {
+        actor<ActorMessage> {
             var habitName = ""
             var habitDuration = ""
 
@@ -24,7 +25,7 @@ object HabitActor {
 
             for (message in channel) {
                 when (message) {
-                    is CreateHabitMessage.Say ->
+                    is ActorMessage.Say ->
                         when (state) {
                             CreateHabitState.HabitName -> {
                                 habitName = message.text
@@ -48,10 +49,6 @@ object HabitActor {
             }
         }
     }
-}
-
-sealed class CreateHabitMessage {
-    class Say(val text: String, val deferred: CompletableDeferred<Boolean>) : CreateHabitMessage()
 }
 
 sealed class CreateHabitState {

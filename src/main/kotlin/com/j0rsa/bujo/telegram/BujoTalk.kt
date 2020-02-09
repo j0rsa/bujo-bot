@@ -3,7 +3,6 @@ package com.j0rsa.bujo.telegram
 import com.typesafe.config.ConfigFactory
 import io.github.config4k.extract
 import java.io.File
-import java.nio.charset.Charset
 
 /**
  * @author red
@@ -26,19 +25,22 @@ object BujoTalk {
             Language.DE to "\uD83C\uDDE9\uD83C\uDDEA"
         )
 
-    fun getWelcomeMessage(language: Language): String =
-        translactions[language]!!.welcome
-
-    fun getLanguage(languageCode: String?): Language =
+    private fun getLanguage(languageCode: String?): Language =
         languageCode?.let {
             Language.valueOf(it.toUpperCase())
         } ?: Language.EN
 
-
+    fun withLanguage(languageCode: String?): Lines =
+        translactions[getLanguage(languageCode)]!!
 }
 
 data class Lines(
-    val welcome: String
+    val welcome: String,
+    val showHabitsMessage: String,
+    val showHabitsButton: String,
+    val createActionButton: String,
+    val welcomeBack: String,
+    val genericError: String
 )
 
 enum class Language{

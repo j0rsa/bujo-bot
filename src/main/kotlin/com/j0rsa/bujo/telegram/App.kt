@@ -3,6 +3,7 @@ package com.j0rsa.bujo.telegram
 import me.ivmg.telegram.bot
 import me.ivmg.telegram.dispatch
 import me.ivmg.telegram.dispatcher.command
+import me.ivmg.telegram.dispatcher.message
 import me.ivmg.telegram.entities.Message
 import me.ivmg.telegram.extensions.filters.Filter
 
@@ -16,20 +17,24 @@ class App {
         val bot = bot {
             token = Config.app.token
             dispatch {
-                command("start") { bot, udate ->
-                    BujoLogic.createTelegramUser(bot, udate)
-
-                }
-//                message(NotCommand) { bot, update -> BujoLogic.handleMessageInContext(bot, update) }
+                command("start") { bot, update -> BujoLogic.registerTelegramUser(bot, update) }
+                command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
+                message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
+                message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
+                message(Filter.Text and ShowHabitsButtonFilter.not() and CreateActionButtonFilter.not()) { _, update -> BujoLogic.handleActorMessage(update) }
             }
         }
         bot.startPolling()
     }
 
-    object NotCommand : Filter {
-        override fun Message.predicate(): Boolean {
-            return text != null && !text!!.startsWith("/")
-        }
+    object ShowHabitsButtonFilter : Filter {
+        override fun Message.predicate(): Boolean =
+            text == BujoTalk.withLanguage(from?.languageCode).showHabitsButton
+    }
+
+    object CreateActionButtonFilter : Filter {
+        override fun Message.predicate(): Boolean =
+            text == BujoTalk.withLanguage(from?.languageCode).createActionButton
     }
 
     companion object {

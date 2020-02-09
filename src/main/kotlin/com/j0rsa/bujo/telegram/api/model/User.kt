@@ -7,6 +7,21 @@ import java.util.*
  * @since 08.02.20
  */
 
+data class CreateUserRequest(
+    val telegramId: Long,
+    val firstName: String = "",
+    val lastName: String = "",
+    val language: String = ""
+)
+
+data class User(
+    val id: UserId,
+    val telegramId: Long,
+    val firstName: String = "",
+    val lastName: String = "",
+    val language: String = ""
+)
+
 inline class UserId(val value: UUID) {
     companion object {
         fun randomValue() = UserId(UUID.randomUUID())

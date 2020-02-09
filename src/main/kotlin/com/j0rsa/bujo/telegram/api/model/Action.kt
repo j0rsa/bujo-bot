@@ -7,6 +7,11 @@ import java.util.*
  * @since 08.02.20
  */
 
+data class ActionRequest(
+    val description: String,
+    val tags: List<TagRequest>
+)
+
 data class Action(
     val description: String,
     val tags: List<Tag>,
