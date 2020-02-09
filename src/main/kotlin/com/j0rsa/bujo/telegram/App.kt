@@ -6,6 +6,7 @@ import me.ivmg.telegram.dispatcher.command
 import me.ivmg.telegram.dispatcher.message
 import me.ivmg.telegram.entities.Message
 import me.ivmg.telegram.extensions.filters.Filter
+import okhttp3.logging.HttpLoggingInterceptor
 
 /**
  * @author red
@@ -16,6 +17,7 @@ class App {
     fun run() {
         val bot = bot {
             token = Config.app.token
+            logLevel = HttpLoggingInterceptor.Level.NONE
             dispatch {
                 command("start") { bot, update -> BujoLogic.registerTelegramUser(bot, update) }
                 command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
