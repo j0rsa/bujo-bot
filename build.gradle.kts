@@ -1,6 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     kotlin("jvm") version Versions.kotlin
+    kotlin("kapt") version Versions.kapt
     id(Plugins.gitProperties) version Versions.gitProperties
     id(Plugins.dockerCompose) version Versions.dockerCompose
     id(Plugins.docker) version Versions.docker
@@ -27,6 +28,9 @@ dependencies {
     implementation(Libs.slf4jApi)
     implementation(Libs.logbackClassic)
     implementation(Libs.logbackCore)
+    implementation(Libs.arrowFx)
+    implementation(Libs.arrowSyntax)
+    kapt(Libs.arrowMeta)
 
     testImplementation(TestLibs.junit)
 }

@@ -1,5 +1,7 @@
 package com.j0rsa.bujo.telegram.actor
 
+import arrow.core.Either
+import arrow.core.Either.Right
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
@@ -54,8 +56,8 @@ object CreateActionActor : Actor {
                                         actionDescription,
                                         actionTags
                                     )
-                                ).status) {
-                                    Status.OK, Status.CREATED ->
+                                )) {
+                                    is Right ->
                                         bot.sendMessage(
                                             chatId,
                                             "Action was registered"

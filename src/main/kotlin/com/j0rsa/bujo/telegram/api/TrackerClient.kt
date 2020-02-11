@@ -1,6 +1,10 @@
 package com.j0rsa.bujo.telegram.api
 
+import arrow.core.Either
+import com.j0rsa.bujo.telegram.BotError
 import com.j0rsa.bujo.telegram.Config
+import com.j0rsa.bujo.telegram.NotCreated
+import com.j0rsa.bujo.telegram.api.RequestLens.actionIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionRequestLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitLens
 import com.j0rsa.bujo.telegram.api.RequestLens.multipleHabitsLens
@@ -35,10 +39,13 @@ object TrackerClient {
             logger.debug(message)
         }
     }).apply { setLevel(HttpLoggingInterceptor.Level.valueOf(Config.app.httpLoggingLevel)) }
-    private val client = OkHttp(OkHttpClient.Builder()
-        .followRedirects(false)
-        .addInterceptor(httpLogging)
-        .build())
+    private val client = OkHttp(
+        OkHttpClient.Builder()
+            .followRedirects(false)
+            .addInterceptor(httpLogging)
+            .build()
+    )
+
     fun health(): Boolean =
         client("/health".get()).status == Status.OK
 
@@ -63,8 +70,13 @@ object TrackerClient {
     fun getHabit(userId: UserId, habitId: HabitId): Habit =
         habitLens(client("/habits/$habitId".get().with(userId)))
 
-    fun createAction(userId: UserId, actionRequest: ActionRequest) =
-        client(actionRequestLens(actionRequest, "/actions".post().with(userId)))
+    fun createAction(userId: UserId, actionRequest: ActionRequest): Either<BotError, ActionId> {
+        val response = client(actionRequestLens(actionRequest, "/actions".post().with(userId)))
+        return when (response.status) {
+            Status.OK, Status.CREATED -> Either.Right(actionIdLens(response))
+            else -> Either.Left(NotCreated)
+        }
+    }
 
     private fun Request.with(userId: UserId) =
         this.header(Config.app.tracker.authHeader, userId.value.toString())
