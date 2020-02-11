@@ -33,6 +33,9 @@ dependencies {
     kapt(Libs.arrowMeta)
 
     testImplementation(TestLibs.junit)
+    testImplementation(TestLibs.coroutinesTest)
+    testImplementation(TestLibs.mockito)
+    testImplementation(TestLibs.mockitoKotlin)
 }
 
 tasks {

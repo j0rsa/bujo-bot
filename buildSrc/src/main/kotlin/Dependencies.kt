@@ -47,4 +47,7 @@ object Libs {
 
 object TestLibs {
     const val junit = "junit:junit:${Versions.junit}"
+    const val coroutinesTest = "org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.coroutines}"
+    const val mockito = "org.mockito:mockito-core:3.2.4"
+    const val mockitoKotlin = "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
 }

@@ -1,9 +1,13 @@
 package com.j0rsa.bujo.telegram.monad
 
+import arrow.core.Either
+import com.j0rsa.bujo.telegram.BotError
 import com.j0rsa.bujo.telegram.BujoBot
 import com.j0rsa.bujo.telegram.api.TrackerClient
+import com.j0rsa.bujo.telegram.api.model.*
 import kotlinx.coroutines.CoroutineScope
 import me.ivmg.telegram.Bot
+import org.http4k.core.Status
 
 /**
  * @author red
@@ -26,10 +30,19 @@ class Reader<D, out A>(val run: (D) -> A) {
     }
 }
 
-data class ActorContext (
-    val bot: BujoBot,
+data class ActorContext(
+    val bot: com.j0rsa.bujo.telegram.Bot,
     val scope: CoroutineScope,
-    val client: TrackerClient = TrackerClient
+    val client: Client = TrackerClient
 ) {
-    constructor(bot: Bot, scope: CoroutineScope): this(BujoBot(bot), scope)
+    constructor(bot: Bot, scope: CoroutineScope) : this(BujoBot(bot), scope)
+}
+
+interface Client {
+    fun health(): Boolean
+    fun createUser(userRequest: CreateUserRequest): Pair<UserId?, Status>
+    fun getHabits(userId: UserId): List<HabitsInfo>
+    fun getUser(telegramUserId: Long): User
+    fun getHabit(userId: UserId, habitId: HabitId): Habit
+    fun createAction(userId: UserId, actionRequest: ActionRequest): Either<BotError, ActionId>
 }
