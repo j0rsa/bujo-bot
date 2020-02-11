@@ -36,6 +36,7 @@ dependencies {
     testImplementation(TestLibs.coroutinesTest)
     testImplementation(TestLibs.mockito)
     testImplementation(TestLibs.mockitoKotlin)
+    testImplementation(TestLibs.assertk)
 }
 
 tasks {

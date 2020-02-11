@@ -50,4 +50,5 @@ object TestLibs {
     const val coroutinesTest = "org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.coroutines}"
     const val mockito = "org.mockito:mockito-core:3.2.4"
     const val mockitoKotlin = "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+    const val assertk = "com.willowtreeapps.assertk:assertk-jvm:0.21"
 }
