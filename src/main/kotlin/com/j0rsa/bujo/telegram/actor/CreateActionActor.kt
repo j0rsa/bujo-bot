@@ -1,6 +1,5 @@
 package com.j0rsa.bujo.telegram.actor
 
-import arrow.core.Either
 import arrow.core.Either.Right
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
@@ -9,7 +8,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.actor
 import me.ivmg.telegram.Bot
-import org.http4k.core.Status
 
 /**
  * @author red
