@@ -5,6 +5,7 @@ import com.j0rsa.bujo.telegram.actor.CreateActionActor
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
+import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
 import me.ivmg.telegram.Bot
@@ -17,7 +18,7 @@ import java.math.BigDecimal
  * @since 09.02.20
  */
 
-object BujoLogic: CoroutineScope by CoroutineScope(Dispatchers.Default) {
+object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     private val userActors = mutableMapOf<Long, SendChannel<ActorMessage>>()
     fun showMenu(bot: Bot, update: Update) {
         update.message?.let { message ->
@@ -137,11 +138,15 @@ object BujoLogic: CoroutineScope by CoroutineScope(Dispatchers.Default) {
             message.from?.let {
                 launch {
                     userActors[it.id]?.close()
-                    userActors.put(it.id, CreateActionActor.yield(this, bot, message.chat.id, it.id))
+                    userActors.put(
+                        it.id,
+                        CreateActionActor.yield(message.chat.id, it.id).run(ActorContext(bot, this))
+                    )
                 }
             }
         }
     }
+
 }
 
 private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButton>> =

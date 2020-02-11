@@ -1,27 +1,32 @@
 package com.j0rsa.bujo.telegram.actor
 
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
+import com.j0rsa.bujo.telegram.monad.ActorContext
+import com.j0rsa.bujo.telegram.monad.Reader
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.actor
-import me.ivmg.telegram.Bot
-import java.lang.IllegalStateException
 
 /**
  * @author red
  * @since 09.02.20
  */
 
-object HabitActor: Actor {
+object HabitActor : Actor {
     @UseExperimental(ObsoleteCoroutinesApi::class)
-    override fun yield(scope: CoroutineScope, bot: Bot, chatId: Long, userId: Long) = with(scope) {
+    override fun yield(chatId: Long, userId: Long) =
+        Reader.ask<ActorContext>().map { yield2(chatId, userId, it) }
+
+    private fun yield2(
+        chatId: Long,
+        userId: Long,
+        ctx: ActorContext
+    ) = with(ctx.scope) {
         actor<ActorMessage> {
             var habitName = ""
             var habitDuration = ""
 
             //INIT ACTOR
             //FINISH INIT
-            var state: CreateHabitState =  CreateHabitState.HabitName
+            var state: CreateHabitState = CreateHabitState.HabitName
 
             for (message in channel) {
                 when (message) {
@@ -42,13 +47,15 @@ object HabitActor: Actor {
                                 message.deferred.complete(true)
                             }
                             CreateHabitState.Terminated -> {
-                                message.deferred.completeExceptionally(IllegalStateException("We are done already!"))
+                                message.deferred.completeExceptionally(java.lang.IllegalStateException("We are done already!"))
                             }
                         }
                 }
             }
         }
     }
+
+
 }
 
 sealed class CreateHabitState {

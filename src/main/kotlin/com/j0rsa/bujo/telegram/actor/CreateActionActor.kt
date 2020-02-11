@@ -1,13 +1,13 @@
 package com.j0rsa.bujo.telegram.actor
 
 import arrow.core.Either.Right
-import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
-import kotlinx.coroutines.CoroutineScope
+import com.j0rsa.bujo.telegram.monad.ActorContext
+import com.j0rsa.bujo.telegram.monad.Reader
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
-import me.ivmg.telegram.Bot
 
 /**
  * @author red
@@ -16,13 +16,19 @@ import me.ivmg.telegram.Bot
 
 object CreateActionActor : Actor {
     @UseExperimental(ObsoleteCoroutinesApi::class)
-    override fun yield(scope: CoroutineScope, bot: Bot, chatId: Long, userId: Long) = with(scope) {
+    override fun yield(
+        chatId: Long,
+        userId: Long
+    ): Reader<ActorContext, SendChannel<ActorMessage>> =
+        Reader.ask<ActorContext>().map { ctx -> yield2(chatId, userId, ctx) }
+
+    private fun yield2(chatId: Long, userId: Long, ctx: ActorContext) = with(ctx.scope) {
         actor<ActorMessage> {
-            val user = TrackerClient.getUser(userId)
+            val user = ctx.client.getUser(userId)
             var actionDescription = ""
 
             //INIT ACTOR
-            bot.sendMessage(
+            ctx.bot.sendMessage(
                 chatId,
                 "You are creating an action\n" +
                         "Enter action description"
@@ -38,7 +44,7 @@ object CreateActionActor : Actor {
                                 actionDescription = message.text
                                 state = CreateActionState.ActionTags
                                 //send message: Enter duration
-                                bot.sendMessage(
+                                ctx.bot.sendMessage(
                                     chatId,
                                     "Enter actions tags (comma separated)"
                                 )
@@ -49,19 +55,19 @@ object CreateActionActor : Actor {
                                 //received last item
                                 val actionTags = message.text.split(",").map { TagRequest.fromString(it) }
                                 //call API
-                                when (TrackerClient.createAction(
+                                when (ctx.client.createAction(
                                     user.id, ActionRequest(
                                         actionDescription,
                                         actionTags
                                     )
                                 )) {
                                     is Right ->
-                                        bot.sendMessage(
+                                        ctx.bot.sendMessage(
                                             chatId,
                                             "Action was registered"
                                         )
                                     else ->
-                                        bot.sendMessage(
+                                        ctx.bot.sendMessage(
                                             chatId,
                                             "Action was not registered 😢"
                                         )

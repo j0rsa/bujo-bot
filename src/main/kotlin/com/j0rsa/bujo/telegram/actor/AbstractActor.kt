@@ -1,17 +1,20 @@
 package com.j0rsa.bujo.telegram.actor
 
+import com.j0rsa.bujo.telegram.monad.ActorContext
+import com.j0rsa.bujo.telegram.monad.Reader
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
-import me.ivmg.telegram.Bot
 
 /**
  * @author red
  * @since 09.02.20
  */
 
-interface Actor{
-    fun yield(scope: CoroutineScope, bot: Bot, chatId: Long, userId: Long): SendChannel<ActorMessage>
+interface Actor {
+    fun yield(
+        chatId: Long,
+        userId: Long
+    ): Reader<ActorContext, SendChannel<ActorMessage>>
 }
 
 sealed class ActorMessage {
