@@ -37,11 +37,7 @@ object CreateActionActor : Actor {
 			var actionDescription = ""
 			val sendMessage = { text: String -> ctx.bot.sendMessage(chatId, text) }
 			val createAction = { text: String ->
-				val actionTags = text.split(",").map { TagRequest.fromString(it) }
-				ctx.client.createAction(
-					user.id,
-					ActionRequest(actionDescription, actionTags)
-				)
+				ctx.client.createAction(user.id, ActionRequest(actionDescription, text))
 			}
 
 			//INIT ACTOR
