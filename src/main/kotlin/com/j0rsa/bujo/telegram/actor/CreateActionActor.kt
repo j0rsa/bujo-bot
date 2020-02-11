@@ -13,6 +13,8 @@ import kotlinx.coroutines.channels.actor
  * @author red
  * @since 09.02.20
  */
+const val INIT_ACTION_TEXT = """You are creating an action\n
+                    Enter action description"""
 
 object CreateActionActor : Actor {
     @UseExperimental(ObsoleteCoroutinesApi::class)
@@ -20,9 +22,9 @@ object CreateActionActor : Actor {
         chatId: Long,
         userId: Long
     ): Reader<ActorContext, SendChannel<ActorMessage>> =
-        Reader.ask<ActorContext>().map { ctx -> yield2(chatId, userId, ctx) }
+        Reader.ask<ActorContext>().map { ctx -> yield(chatId, userId, ctx) }
 
-    private fun yield2(chatId: Long, userId: Long, ctx: ActorContext) = with(ctx.scope) {
+    private fun yield(chatId: Long, userId: Long, ctx: ActorContext) = with(ctx.scope) {
         actor<ActorMessage> {
             val user = ctx.client.getUser(userId)
             var actionDescription = ""
@@ -30,8 +32,7 @@ object CreateActionActor : Actor {
             //INIT ACTOR
             ctx.bot.sendMessage(
                 chatId,
-                "You are creating an action\n" +
-                        "Enter action description"
+                INIT_ACTION_TEXT
             )
             //FINISH INIT
             var state: CreateActionState = CreateActionState.ActionDescription

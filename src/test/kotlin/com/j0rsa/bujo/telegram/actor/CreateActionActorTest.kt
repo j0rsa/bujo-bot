@@ -13,18 +13,21 @@ import org.junit.Test
 
 @ExperimentalCoroutinesApi
 class CreateActionActorTest {
+    private val chatId = 10L
+    private val userId = 1L
 
     @Test
-    fun testYield1() = runBlockingTest {
+    fun testYieldForInit() = runBlockingTest {
         val bot = mock<Bot>()
         val user = User(UserId.randomValue(), 1L)
         val client = mock<Client> {
-            on { getUser(1L) } doReturn user
+            on { getUser(userId) } doReturn user
         }
 
-        val actorChannel = CreateActionActor.yield(10L, 1L).run(ActorContext(bot, this, client))
+        val actorChannel = CreateActionActor.yield(chatId, userId).run(ActorContext(bot, this, client))
 
-        verify(client).getUser(1L)
+        verify(client).getUser(userId)
+        verify(bot).sendMessage(chatId, INIT_ACTION_TEXT)
         actorChannel.close()
     }
 }
