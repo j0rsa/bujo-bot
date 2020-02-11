@@ -38,16 +38,16 @@ object HabitActor : Actor {
                                 //send message: Enter duration
 
                                 // flow is not finished
-                                message.deferred.complete(false)
+                                message.unComplete()
                             }
                             CreateHabitState.HabitDuration -> {
                                 //received last item
                                 //call API
                                 state = CreateHabitState.Terminated
-                                message.deferred.complete(true)
+                                message.complete()
                             }
                             CreateHabitState.Terminated -> {
-                                message.deferred.completeExceptionally(java.lang.IllegalStateException("We are done already!"))
+                                message.completeExceptionally(java.lang.IllegalStateException("We are done already!"))
                             }
                         }
                 }

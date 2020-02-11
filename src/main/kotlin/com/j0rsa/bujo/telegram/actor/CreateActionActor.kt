@@ -1,6 +1,9 @@
 package com.j0rsa.bujo.telegram.actor
 
+import arrow.core.Either
 import arrow.core.Either.Right
+import com.j0rsa.bujo.telegram.BotError
+import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.monad.ActorContext
@@ -32,12 +35,17 @@ object CreateActionActor : Actor {
 		actor<ActorMessage> {
 			val user = ctx.client.getUser(userId)
 			var actionDescription = ""
+			val sendMessage = { text: String -> ctx.bot.sendMessage(chatId, text) }
+			val createAction = { text: String ->
+				val actionTags = text.split(",").map { TagRequest.fromString(it) }
+				ctx.client.createAction(
+					user.id,
+					ActionRequest(actionDescription, actionTags)
+				)
+			}
 
 			//INIT ACTOR
-			ctx.bot.sendMessage(
-				chatId,
-				INIT_ACTION_TEXT
-			)
+			sendMessage(INIT_ACTION_TEXT)
 			//FINISH INIT
 			var state: CreateActionState = CreateActionState.ActionDescription
 
@@ -49,31 +57,25 @@ object CreateActionActor : Actor {
 								actionDescription = message.text
 								state = CreateActionState.ActionTags
 								//send message: Enter duration
-								ctx.bot.sendMessage(chatId, TAGS)
+								sendMessage(TAGS)
 								// flow is not finished
-								message.deferred.complete(false)
+								message.unComplete()
 							}
 							CreateActionState.ActionTags -> {
 								//received last item
-								val actionTags = message.text.split(",").map { TagRequest.fromString(it) }
 								//call API
-								when (ctx.client.createAction(
-									user.id, ActionRequest(
-										actionDescription,
-										actionTags
-									)
-								)) {
+								when (createAction(message.text)) {
 									is Right ->
-										ctx.bot.sendMessage(chatId, ACTION_SUCCESS)
+										sendMessage(ACTION_SUCCESS)
 									else ->
-										ctx.bot.sendMessage(chatId, ACTION_FAILED)
+										sendMessage(ACTION_FAILED)
 								}
 								state = CreateActionState.Terminated
-								message.deferred.complete(true)
+								message.complete()
 							}
 
 							CreateActionState.Terminated -> {
-								message.deferred.completeExceptionally(IllegalStateException("We are done already!"))
+								message.completeExceptionally(IllegalStateException("We are done already!"))
 							}
 						}
 				}

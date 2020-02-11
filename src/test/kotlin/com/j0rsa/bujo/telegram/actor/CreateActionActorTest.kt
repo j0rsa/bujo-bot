@@ -22,7 +22,7 @@ class CreateActionActorTest {
     private val actionId = ActionId.randomValue()
 
 	@Test
-	fun testYieldForInit() = runBlockingTest {
+	fun testActionCreation() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
@@ -38,7 +38,7 @@ class CreateActionActorTest {
 		verify(bot).sendMessage(chatId, INIT_ACTION_TEXT)
 		verify(bot).sendMessage(chatId, TAGS)
 		verify(bot).sendMessage(chatId, ACTION_SUCCESS)
-		assertThat(deferredFinished.isCompleted)
+		assertThat(deferredFinished.await())
 		actorChannel.close()
 	}
 
