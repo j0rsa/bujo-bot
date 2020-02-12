@@ -41,8 +41,8 @@ object CreateActionActor : Actor {
 			sendMessage(INIT_ACTION_TEXT)
 			var receiver: (ActorMessage.Say) -> Boolean
 
-			val tagsFun = { message: ActorMessage.Say ->
-				receiver = terminated()
+			val tagsReceiver = { message: ActorMessage.Say ->
+				receiver = terminatedReceiver()
 				when (createAction(message.text)) {
 					is Right ->
 						sendMessage(ACTION_SUCCESS)
@@ -52,8 +52,8 @@ object CreateActionActor : Actor {
 				message.complete()
 			}
 
-			val descriptionFun = { message: ActorMessage.Say ->
-				receiver = tagsFun
+			val descriptionReceiver = { message: ActorMessage.Say ->
+				receiver = tagsReceiver
 				actionDescription = message.text
 				//send message: Enter duration
 				sendMessage(TAGS)
@@ -62,7 +62,7 @@ object CreateActionActor : Actor {
 			}
 
 			//FINISH INIT
-			receiver = descriptionFun
+			receiver = descriptionReceiver
 
 			for (message in channel) {
 				if (message is ActorMessage.Say) receiver(message)
@@ -70,7 +70,7 @@ object CreateActionActor : Actor {
 		}
 	}
 
-	private fun terminated(): (ActorMessage.Say) -> Boolean = { message: ActorMessage.Say ->
+	private fun terminatedReceiver(): (ActorMessage.Say) -> Boolean = { message: ActorMessage.Say ->
 		message.completeExceptionally(IllegalStateException("We are done already!"))
 	}
 }
