@@ -35,6 +35,7 @@ object CreateActionActor : Actor {
 		actor<ActorMessage> {
 			val user = ctx.client.getUser(userId)
 			var actionDescription = ""
+
 			val sendMessage = { text: String -> ctx.bot.sendMessage(chatId, text) }
 			val createAction = { text: String ->
 				ctx.client.createAction(user.id, ActionRequest(actionDescription, text))
@@ -42,46 +43,38 @@ object CreateActionActor : Actor {
 
 			//INIT ACTOR
 			sendMessage(INIT_ACTION_TEXT)
+			var receiver: (ActorMessage.Say) -> Boolean
+
+			val terminated = { message: ActorMessage.Say ->
+				message.completeExceptionally(IllegalStateException("We are done already!"))
+			}
+
+			val tagsFun = { message: ActorMessage.Say ->
+				receiver = terminated
+				when (createAction(message.text)) {
+					is Right ->
+						sendMessage(ACTION_SUCCESS)
+					else ->
+						sendMessage(ACTION_FAILED)
+				}
+				message.complete()
+			}
+
+			val descriptionFun = { message: ActorMessage.Say ->
+				receiver = tagsFun
+				actionDescription = message.text
+				//send message: Enter duration
+				sendMessage(TAGS)
+				// flow is not finished
+				message.unComplete()
+			}
+
 			//FINISH INIT
-			var state: CreateActionState = CreateActionState.ActionDescription
+			receiver = descriptionFun
 
 			for (message in channel) {
-				when (message) {
-					is ActorMessage.Say ->
-						when (state) {
-							CreateActionState.ActionDescription -> {
-								actionDescription = message.text
-								state = CreateActionState.ActionTags
-								//send message: Enter duration
-								sendMessage(TAGS)
-								// flow is not finished
-								message.unComplete()
-							}
-							CreateActionState.ActionTags -> {
-								//received last item
-								//call API
-								when (createAction(message.text)) {
-									is Right ->
-										sendMessage(ACTION_SUCCESS)
-									else ->
-										sendMessage(ACTION_FAILED)
-								}
-								state = CreateActionState.Terminated
-								message.complete()
-							}
-
-							CreateActionState.Terminated -> {
-								message.completeExceptionally(IllegalStateException("We are done already!"))
-							}
-						}
-				}
+				if (message is ActorMessage.Say) receiver(message)
 			}
 		}
 	}
-}
-
-sealed class CreateActionState {
-	object ActionDescription : CreateActionState()
-	object ActionTags : CreateActionState()
-	object Terminated : CreateActionState()
 }

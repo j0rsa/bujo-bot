@@ -19,7 +19,9 @@ class CreateActionActorTest {
 	private val userId = 1L
 	private val bot = mock<Bot>()
 	private val user = User(UserId.randomValue(), 1L)
-    private val actionId = ActionId.randomValue()
+	private val actionId = ActionId.randomValue()
+	private val description = "description"
+	private val tagsText = "tag1, tag2"
 
 	@Test
 	fun testActionCreation() = runBlockingTest {
@@ -30,8 +32,8 @@ class CreateActionActorTest {
 		val deferredFinished = CompletableDeferred<Boolean>()
 
 		val actorChannel = CreateActionActor.yield(chatId, userId).run(ActorContext(bot, this, client))
-		actorChannel.send(ActorMessage.Say("description", deferredFinished))
-		actorChannel.send(ActorMessage.Say("tag1, tag2", deferredFinished))
+		actorChannel.send(ActorMessage.Say(description, deferredFinished))
+		actorChannel.send(ActorMessage.Say(tagsText, deferredFinished))
 
 		verify(client).getUser(userId)
 		verify(client).createAction(user.id, defaultActionRequest())
