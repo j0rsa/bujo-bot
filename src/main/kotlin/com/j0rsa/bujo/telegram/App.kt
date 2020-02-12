@@ -1,5 +1,7 @@
 package com.j0rsa.bujo.telegram
 
+import com.j0rsa.bujo.telegram.BujoLogic.ActorCommand.Back
+import com.j0rsa.bujo.telegram.BujoLogic.ActorCommand.Skip
 import me.ivmg.telegram.bot
 import me.ivmg.telegram.dispatch
 import me.ivmg.telegram.dispatcher.command
@@ -21,6 +23,8 @@ class App {
             dispatch {
                 command("start") { bot, update -> BujoLogic.registerTelegramUser(bot, update) }
                 command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
+                command("skip") { _, update -> BujoLogic.handleActorMessage(update, Skip) }
+                command("back") { _, update -> BujoLogic.handleActorMessage(update, Back) }
                 message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
                 message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
                 message(Filter.Text and ShowHabitsButtonFilter.not() and CreateActionButtonFilter.not()) { _, update -> BujoLogic.handleActorMessage(update) }

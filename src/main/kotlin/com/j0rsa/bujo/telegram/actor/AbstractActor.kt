@@ -13,10 +13,12 @@ interface Actor {
 	fun yield(ctx: ActorContext): SendChannel<ActorMessage>
 }
 
-sealed class ActorMessage {
-	class Say(val text: String, val deferred: CompletableDeferred<Boolean>) : ActorMessage() {
-		fun complete() = deferred.complete(true)
-		fun completeExceptionally(exception: Throwable) = deferred.completeExceptionally(exception)
-		fun unComplete() = deferred.complete(false)
-	}
+sealed class ActorMessage(val deferred: CompletableDeferred<Boolean>) {
+	class Say(val text: String, d: CompletableDeferred<Boolean>) : ActorMessage(d)
+	class Skip(d: CompletableDeferred<Boolean>) : ActorMessage(d)
+	class Back(d: CompletableDeferred<Boolean>) : ActorMessage(d)
+
+	fun complete() = deferred.complete(true)
+	fun completeExceptionally(exception: Throwable) = deferred.completeExceptionally(exception)
+	fun unComplete() = deferred.complete(false)
 }
