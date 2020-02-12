@@ -82,6 +82,7 @@ object CreateActionActor : Actor {
 			override fun say(message: ActorMessage.Say): Receiver {
 				tags = message.text.splitToTags()
 				sendMessage(VALUES)
+				message.unComplete()
 				return valuesReceiver()
 			}
 
@@ -99,10 +100,12 @@ object CreateActionActor : Actor {
 				}
 				values.isNotEmpty() -> {
 					sendMessage(valuesExistMessage(values))
+					message.unComplete()
 					valuesReceiver()
 				}
 				else -> {
 					sendMessage(VALUES)
+					message.unComplete()
 					valuesReceiver()
 				}
 			}
@@ -111,17 +114,17 @@ object CreateActionActor : Actor {
 		private fun valuesReceiver(): Receiver = object : LocalReceiver(cancel()) {
 			override fun say(message: ActorMessage.Say): Receiver {
 				values = listOf(Value(ValueType.Mood, message.text, "mood"))
+				message.unComplete()
 				return createAction(message)
 			}
 
 			override fun back(message: ActorMessage.Back): Receiver {
 				sendMessage(tagsExistMessage(tags))
+				message.unComplete()
 				return tagsReceiver()
 			}
 
-			override fun skip(message: ActorMessage.Skip): Receiver {
-				return createAction(message)
-			}
+			override fun skip(message: ActorMessage.Skip): Receiver = createAction(message)
 
 			private fun createAction(message: ActorMessage): Receiver {
 				when (createAction()) {
