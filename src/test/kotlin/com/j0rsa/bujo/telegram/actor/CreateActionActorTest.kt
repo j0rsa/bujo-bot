@@ -2,6 +2,8 @@ package com.j0rsa.bujo.telegram.actor
 
 import arrow.core.Either
 import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.j0rsa.bujo.telegram.Bot
 import com.j0rsa.bujo.telegram.actor.CreateActionActor.descriptionExistMessage
 import com.j0rsa.bujo.telegram.actor.CreateActionActor.tagsExistMessage
@@ -46,7 +48,7 @@ class CreateActionActorTest {
 		verify(bot).sendMessage(chatId, TAGS)
 		verify(bot).sendMessage(chatId, VALUES)
 		verify(bot).sendMessage(chatId, ACTION_SUCCESS)
-		assertThat(deferredFinished.await())
+		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
 
@@ -62,7 +64,7 @@ class CreateActionActorTest {
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
 
 		verify(bot).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
-		assertThat(deferredFinished.isActive)
+		assertThat(deferredFinished.await()).isFalse()
 		actorChannel.close()
 	}
 
@@ -79,7 +81,7 @@ class CreateActionActorTest {
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
 
 		verify(bot).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
-		assertThat(deferredFinished.isActive)
+		assertThat(deferredFinished.await()).isFalse()
 		actorChannel.close()
 	}
 
@@ -100,7 +102,7 @@ class CreateActionActorTest {
 		verify(bot).sendMessage(chatId, TAGS)
 		verify(bot).sendMessage(chatId, tagsExistMessage(tags))
 		verify(bot, never()).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
-		assertThat(deferredFinished.isActive)
+		assertThat(deferredFinished.await()).isFalse()
 		actorChannel.close()
 	}
 
@@ -123,7 +125,7 @@ class CreateActionActorTest {
 		verify(bot).sendMessage(chatId, VALUES)
 		verify(bot, never()).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
 		verify(bot).sendMessage(chatId, ACTION_SUCCESS)
-		assertThat(deferredFinished.await())
+		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
 
@@ -139,7 +141,7 @@ class CreateActionActorTest {
 		actorChannel.send(ActorMessage.Back(deferredFinished))
 
 		verify(bot).sendMessage(chatId, ACTION_CANCELLED_TEXT)
-		assertThat(deferredFinished.await())
+		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
 
@@ -156,7 +158,7 @@ class CreateActionActorTest {
 		actorChannel.send(ActorMessage.Back(deferredFinished))
 
 		verify(bot).sendMessage(chatId, descriptionExistMessage(description))
-		assertThat(deferredFinished.await())
+		assertThat(deferredFinished.await()).isFalse()
 		actorChannel.close()
 	}
 
@@ -175,7 +177,7 @@ class CreateActionActorTest {
 
 		verify(bot, times(2)).sendMessage(chatId, TAGS)
 		verify(bot).sendMessage(chatId, descriptionExistMessage(description))
-		assertThat(deferredFinished.await())
+		assertThat(deferredFinished.await()).isFalse()
 		actorChannel.close()
 	}
 
@@ -201,7 +203,7 @@ class CreateActionActorTest {
 		verify(bot).sendMessage(chatId, descriptionExistMessage(description))
 		verify(bot).sendMessage(chatId, ACTION_SUCCESS)
 
-		assertThat(deferredFinished.await())
+		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
 
@@ -220,7 +222,7 @@ class CreateActionActorTest {
 
 		verify(bot).sendMessage(chatId, ACTION_CANCELLED_TEXT)
 		verify(client, never()).createAction(eq(user.id), any())
-		assertThat(deferredFinished.await())
+		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
 
