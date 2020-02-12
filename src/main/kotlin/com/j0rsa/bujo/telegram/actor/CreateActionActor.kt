@@ -4,9 +4,7 @@ import arrow.core.Either.Right
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.User
 import com.j0rsa.bujo.telegram.monad.ActorContext
-import com.j0rsa.bujo.telegram.monad.Reader
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 
 /**
@@ -24,20 +22,20 @@ object CreateActionActor : Actor {
 	override fun yield(ctx: ActorContext) = with(ctx.scope) {
 		actor<ActorMessage> {
 			//INIT ACTOR
-			val actor = Actor.init(ctx)
+			val actorSayMessage = ActorSayMessageReceiver.init(ctx)
 			//FINISH INIT
-			var receiver: (ActorMessage.Say) -> Boolean = actor.receiver
+			var receiver: (ActorMessage.Say) -> Boolean = actorSayMessage.receiver
 
 			for (message in channel) {
 				if (message is ActorMessage.Say) {
 					receiver(message)
-					receiver = actor.receiver
+					receiver = actorSayMessage.receiver
 				}
 			}
 		}
 	}
 
-	private data class Actor(
+	private data class ActorSayMessageReceiver(
 		private val user: User,
 		private val ctx: ActorContext,
 		private var actionDescription: String = ""
@@ -72,9 +70,9 @@ object CreateActionActor : Actor {
 			ctx.client.createAction(user.id, ActionRequest(actionDescription, text))
 
 		companion object {
-			fun init(ctx: ActorContext): Actor {
+			fun init(ctx: ActorContext): ActorSayMessageReceiver {
 				val user = ctx.client.getUser(ctx.userId)
-				val actor = Actor(user, ctx)
+				val actor = ActorSayMessageReceiver(user, ctx)
 				actor.sendMessage(INIT_ACTION_TEXT)
 				return actor
 			}

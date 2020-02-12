@@ -1,7 +1,6 @@
 package com.j0rsa.bujo.telegram.actor
 
 import com.j0rsa.bujo.telegram.monad.ActorContext
-import com.j0rsa.bujo.telegram.monad.Reader
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.SendChannel
 
