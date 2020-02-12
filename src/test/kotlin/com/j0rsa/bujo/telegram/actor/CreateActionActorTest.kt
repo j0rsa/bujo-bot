@@ -205,6 +205,25 @@ class CreateActionActorTest {
 		actorChannel.close()
 	}
 
+	@Test
+	fun whenCancel() = runBlockingTest {
+		val client = mock<Client> {
+			on { getUser(userId) } doReturn user
+			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
+		}
+		val deferredFinished = CompletableDeferred<Boolean>()
+
+		val actorChannel = CreateActionActor.yield(actorContext(client))
+		actorChannel.send(sayDescription(deferredFinished))
+		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(ActorMessage.Cancel(deferredFinished))
+
+		verify(bot).sendMessage(chatId, ACTION_CANCELLED_TEXT)
+		verify(client, never()).createAction(eq(user.id), any())
+		assertThat(deferredFinished.await())
+		actorChannel.close()
+	}
+
 	private fun sayTags(deferredFinished: CompletableDeferred<Boolean>) =
 		ActorMessage.Say(tagsText, deferredFinished)
 

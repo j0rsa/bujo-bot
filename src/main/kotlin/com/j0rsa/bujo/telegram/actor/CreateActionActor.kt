@@ -37,6 +37,7 @@ object CreateActionActor : Actor {
 				is ActorMessage.Say -> receiver.say(message)
 				is ActorMessage.Back -> receiver.back(message)
 				is ActorMessage.Skip -> receiver.skip(message)
+				is ActorMessage.Cancel -> receiver.cancel(message)
 			}
 		}
 	}
@@ -59,11 +60,7 @@ object CreateActionActor : Actor {
 				return tagsReceiver()
 			}
 
-			override fun back(message: ActorMessage.Back): Receiver {
-				message.complete()
-				sendMessage(ACTION_CANCELLED_TEXT)
-				return this
-			}
+			override fun back(message: ActorMessage.Back): Receiver = message.cancel()
 
 			override fun skip(message: ActorMessage.Skip): Receiver = when {
 				actionDescription.isEmpty() -> {
@@ -79,6 +76,8 @@ object CreateActionActor : Actor {
 					tagsReceiver()
 				}
 			}
+
+			override fun cancel(message: ActorMessage.Cancel): Receiver = message.cancel()
 		}
 
 		private fun tagsReceiver(): Receiver = object : Receiver {
@@ -109,6 +108,8 @@ object CreateActionActor : Actor {
 					valuesReceiver()
 				}
 			}
+
+			override fun cancel(message: ActorMessage.Cancel): Receiver = message.cancel()
 		}
 
 		private fun valuesReceiver(): Receiver = object : Receiver {
@@ -126,6 +127,8 @@ object CreateActionActor : Actor {
 				return createAction(message)
 			}
 
+			override fun cancel(message: ActorMessage.Cancel): Receiver = message.cancel()
+
 			private fun createAction(message: ActorMessage): Receiver {
 				when (createAction()) {
 					is Right -> sendMessage(ACTION_SUCCESS)
@@ -134,6 +137,12 @@ object CreateActionActor : Actor {
 				message.complete()
 				return TerminatedReceiver
 			}
+		}
+
+		private fun ActorMessage.cancel(): Receiver {
+			sendMessage(ACTION_CANCELLED_TEXT)
+			this.complete()
+			return TerminatedReceiver
 		}
 
 		fun sendMessage(text: String) = ctx.bot.sendMessage(ctx.chatId, text)

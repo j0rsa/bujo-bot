@@ -126,6 +126,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 							when (command) {
 								is ActorCommand.Skip -> actorChannel.send(ActorMessage.Skip(deferredFinished))
 								is ActorCommand.Back -> actorChannel.send(ActorMessage.Back(deferredFinished))
+								is ActorCommand.Cancel -> actorChannel.send(ActorMessage.Cancel(deferredFinished))
 							}
 							if (deferredFinished.await()) {
 								actorChannel.close()
@@ -141,6 +142,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 	sealed class ActorCommand() {
 		object Skip : ActorCommand()
 		object Back : ActorCommand()
+		object Cancel : ActorCommand()
 	}
 
 	fun showHabits(bot: Bot, update: Update) {
