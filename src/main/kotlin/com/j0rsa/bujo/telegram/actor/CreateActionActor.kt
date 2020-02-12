@@ -45,12 +45,8 @@ object CreateActionActor : Actor {
 			sendMessage(INIT_ACTION_TEXT)
 			var receiver: (ActorMessage.Say) -> Boolean
 
-			val terminated = { message: ActorMessage.Say ->
-				message.completeExceptionally(IllegalStateException("We are done already!"))
-			}
-
 			val tagsFun = { message: ActorMessage.Say ->
-				receiver = terminated
+				receiver = terminated()
 				when (createAction(message.text)) {
 					is Right ->
 						sendMessage(ACTION_SUCCESS)
@@ -76,5 +72,9 @@ object CreateActionActor : Actor {
 				if (message is ActorMessage.Say) receiver(message)
 			}
 		}
+	}
+
+	private fun terminated(): (ActorMessage.Say) -> Boolean = { message: ActorMessage.Say ->
+		message.completeExceptionally(IllegalStateException("We are done already!"))
 	}
 }
