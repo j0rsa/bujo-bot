@@ -10,6 +10,7 @@ import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
 import kotlinx.coroutines.*
+import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
 
@@ -31,7 +32,7 @@ class CreateActionActorTest {
 		}
 		val deferredFinished = CompletableDeferred<Boolean>()
 
-		val actorChannel = CreateActionActor.yield(chatId, userId).run(ActorContext(bot, this, client))
+		val actorChannel = CreateActionActor.yield(actorContext(client))
 		actorChannel.send(ActorMessage.Say(description, deferredFinished))
 		actorChannel.send(ActorMessage.Say(tagsText, deferredFinished))
 
@@ -43,6 +44,9 @@ class CreateActionActorTest {
 		assertThat(deferredFinished.await())
 		actorChannel.close()
 	}
+
+	private fun TestCoroutineScope.actorContext(client: Client) =
+		ActorContext(chatId, userId, bot, this, client)
 
 	private fun defaultActionRequest(): ActionRequest {
 		return ActionRequest(

@@ -11,10 +11,7 @@ import kotlinx.coroutines.channels.SendChannel
  */
 
 interface Actor {
-	fun yield(
-		chatId: Long,
-		userId: Long
-	): Reader<ActorContext, SendChannel<ActorMessage>>
+	fun yield(ctx: ActorContext): SendChannel<ActorMessage>
 }
 
 sealed class ActorMessage {

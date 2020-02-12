@@ -140,7 +140,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     userActors[it.id]?.close()
                     userActors.put(
                         it.id,
-                        CreateActionActor.yield(message.chat.id, it.id).run(ActorContext(bot, this))
+                        CreateActionActor.yield(ActorContext(message.chat.id, it.id, bot, this))
                     )
                 }
             }

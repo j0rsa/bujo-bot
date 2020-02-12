@@ -31,11 +31,14 @@ class Reader<D, out A>(val run: (D) -> A) {
 }
 
 data class ActorContext(
+    val chatId: Long,
+    val userId: Long,
     val bot: com.j0rsa.bujo.telegram.Bot,
     val scope: CoroutineScope,
     val client: Client = TrackerClient
 ) {
-    constructor(bot: Bot, scope: CoroutineScope) : this(BujoBot(bot), scope)
+    constructor(chatId: Long, userId: Long, bot: Bot, scope: CoroutineScope) :
+            this(chatId, userId, BujoBot(bot), scope)
 }
 
 interface Client {
