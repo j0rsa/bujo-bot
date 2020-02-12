@@ -1,11 +1,7 @@
 package com.j0rsa.bujo.telegram.actor
 
-import arrow.core.Either
 import arrow.core.Either.Right
-import com.j0rsa.bujo.telegram.BotError
-import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
-import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import com.j0rsa.bujo.telegram.monad.Reader
 import kotlinx.coroutines.ObsoleteCoroutinesApi
