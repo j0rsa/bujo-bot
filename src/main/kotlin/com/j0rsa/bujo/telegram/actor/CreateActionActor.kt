@@ -1,8 +1,7 @@
 package com.j0rsa.bujo.telegram.actor
 
 import arrow.core.Either.Right
-import com.j0rsa.bujo.telegram.api.model.ActionRequest
-import com.j0rsa.bujo.telegram.api.model.User
+import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.actor
@@ -17,10 +16,16 @@ const val ACTION_CANCELLED_TEXT = "You canceled action creation"
 const val TAGS = "Enter actions tags (comma separated) or go /back"
 const val ACTION_SUCCESS = "Action was registered"
 const val ACTION_FAILED = "Action was not registered \uD83D\uDE22"
-const val NOT_SKIPPABLE = "Cannot be skipped"
+const val CAN_NOT_BE_SKIPPED = "Cannot be skipped"
+const val VALUES = "Insert mood value from 1 to 5 or /skip"
 
 object CreateActionActor : Actor {
 	fun descriptionExistMessage(s: String) = "Your description: $s. Enter action description or /skip"
+	fun tagsExistMessage(tags: List<TagRequest>) =
+		"Your tags: ${tags.joinToString(", ") { it.name }}. Enter tags or /skip"
+
+	fun valuesExistMessage(values: List<Value>) =
+		"Your mood value: ${values.first().value}. Enter values or /skip"
 
 	@UseExperimental(ObsoleteCoroutinesApi::class)
 	override fun yield(ctx: ActorContext) = ctx.scope.actor<ActorMessage> {
@@ -39,7 +44,9 @@ object CreateActionActor : Actor {
 	private data class ActorSayMessageReceiver(
 		private val user: User,
 		private val ctx: ActorContext,
-		private var actionDescription: String = ""
+		private var actionDescription: String = "",
+		private var tags: List<TagRequest> = emptyList(),
+		private var values: List<Value> = emptyList()
 	) {
 
 		private fun descriptionReceiver(): Receiver = object : Receiver {
@@ -58,25 +65,27 @@ object CreateActionActor : Actor {
 				return this
 			}
 
-			override fun skip(message: ActorMessage.Skip): Receiver =
-				if (actionDescription.isEmpty()) {
-					sendMessage(NOT_SKIPPABLE)
+			override fun skip(message: ActorMessage.Skip): Receiver = when {
+				actionDescription.isEmpty() -> {
+					sendMessage(CAN_NOT_BE_SKIPPED)
 					this
-				} else {
+				}
+				tags.isNotEmpty() -> {
+					sendMessage(tagsExistMessage(tags))
+					tagsReceiver()
+				}
+				else -> {
 					sendMessage(TAGS)
 					tagsReceiver()
 				}
-
+			}
 		}
 
 		private fun tagsReceiver(): Receiver = object : Receiver {
 			override fun say(message: ActorMessage.Say): Receiver {
-				when (createAction(message.text)) {
-					is Right -> sendMessage(ACTION_SUCCESS)
-					else -> sendMessage(ACTION_FAILED)
-				}
-				message.complete()
-				return terminatedReceiver()
+				tags = message.text.splitToTags()
+				sendMessage(VALUES)
+				return valuesReceiver()
 			}
 
 			override fun back(message: ActorMessage.Back): Receiver {
@@ -85,10 +94,45 @@ object CreateActionActor : Actor {
 				return descriptionReceiver()
 			}
 
+			override fun skip(message: ActorMessage.Skip): Receiver = when {
+				tags.isEmpty() -> {
+					sendMessage(CAN_NOT_BE_SKIPPED)
+					message.unComplete()
+					this
+				}
+				values.isNotEmpty() -> {
+					sendMessage(valuesExistMessage(values))
+					valuesReceiver()
+				}
+				else -> {
+					sendMessage(VALUES)
+					valuesReceiver()
+				}
+			}
+		}
+
+		private fun valuesReceiver(): Receiver = object : Receiver {
+			override fun say(message: ActorMessage.Say): Receiver {
+				values = listOf(Value(ValueType.Mood, message.text, "mood"))
+				return createAction(message)
+			}
+
+			override fun back(message: ActorMessage.Back): Receiver {
+				sendMessage(tagsExistMessage(tags))
+				return tagsReceiver()
+			}
+
 			override fun skip(message: ActorMessage.Skip): Receiver {
-				sendMessage(NOT_SKIPPABLE)
-				message.unComplete()
-				return this
+				return createAction(message)
+			}
+
+			private fun createAction(message: ActorMessage): Receiver {
+				when (createAction()) {
+					is Right -> sendMessage(ACTION_SUCCESS)
+					else -> sendMessage(ACTION_FAILED)
+				}
+				message.complete()
+				return terminatedReceiver()
 			}
 		}
 
@@ -112,8 +156,10 @@ object CreateActionActor : Actor {
 
 		fun sendMessage(text: String) = ctx.bot.sendMessage(ctx.chatId, text)
 
-		private fun createAction(text: String) =
-			ctx.client.createAction(user.id, ActionRequest(actionDescription, text))
+		private fun createAction() =
+			ctx.client.createAction(user.id, ActionRequest(actionDescription, tags, values))
+
+		private fun String.splitToTags() = this.split(",").map { TagRequest.fromString(it) }
 
 		companion object {
 			fun init(ctx: ActorContext): Receiver {

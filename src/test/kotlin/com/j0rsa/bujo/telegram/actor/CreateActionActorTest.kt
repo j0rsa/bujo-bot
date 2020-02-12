@@ -4,13 +4,11 @@ import arrow.core.Either
 import assertk.assertThat
 import com.j0rsa.bujo.telegram.Bot
 import com.j0rsa.bujo.telegram.actor.CreateActionActor.descriptionExistMessage
+import com.j0rsa.bujo.telegram.actor.CreateActionActor.tagsExistMessage
 import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import com.j0rsa.bujo.telegram.monad.Client
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.times
-import com.nhaarman.mockitokotlin2.verify
+import com.nhaarman.mockitokotlin2.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
@@ -26,6 +24,8 @@ class CreateActionActorTest {
 	private val description = "description"
 	private val anotherDescription = "anotherDescription"
 	private val tagsText = "tag1, tag2"
+	private val tags = listOf(TagRequest("tag1"), TagRequest("tag2"))
+	private val value = "5"
 
 	@Test
 	fun testActionCreation() = runBlockingTest {
@@ -36,20 +36,22 @@ class CreateActionActorTest {
 		val deferredFinished = CompletableDeferred<Boolean>()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(ActorMessage.Say(description, deferredFinished))
-		actorChannel.send(ActorMessage.Say(tagsText, deferredFinished))
+		actorChannel.send(sayDescription(deferredFinished))
+		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(sayValue(deferredFinished))
 
 		verify(client).getUser(userId)
 		verify(client).createAction(user.id, defaultActionRequest())
 		verify(bot).sendMessage(chatId, INIT_ACTION_TEXT)
 		verify(bot).sendMessage(chatId, TAGS)
+		verify(bot).sendMessage(chatId, VALUES)
 		verify(bot).sendMessage(chatId, ACTION_SUCCESS)
 		assertThat(deferredFinished.await())
 		actorChannel.close()
 	}
 
 	@Test
-	fun whenSkipOnEmptyDescriptionThenNotSkippable() = runBlockingTest {
+	fun whenSkipOnEmptyDescriptionThenCanNotBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
@@ -59,8 +61,69 @@ class CreateActionActorTest {
 		val actorChannel = CreateActionActor.yield(actorContext(client))
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
 
-		verify(bot).sendMessage(chatId, NOT_SKIPPABLE)
+		verify(bot).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
 		assertThat(deferredFinished.isActive)
+		actorChannel.close()
+	}
+
+	@Test
+	fun whenSkipOnEmptyTagsThenCanNotBeSkipped() = runBlockingTest {
+		val client = mock<Client> {
+			on { getUser(userId) } doReturn user
+			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
+		}
+		val deferredFinished = CompletableDeferred<Boolean>()
+
+		val actorChannel = CreateActionActor.yield(actorContext(client))
+		actorChannel.send(sayDescription(deferredFinished))
+		actorChannel.send(ActorMessage.Skip(deferredFinished))
+
+		verify(bot).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
+		assertThat(deferredFinished.isActive)
+		actorChannel.close()
+	}
+
+	@Test
+	fun whenSkipOnNotEmptyTagsThenCanBeSkipped() = runBlockingTest {
+		val client = mock<Client> {
+			on { getUser(userId) } doReturn user
+			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
+		}
+		val deferredFinished = CompletableDeferred<Boolean>()
+
+		val actorChannel = CreateActionActor.yield(actorContext(client))
+		actorChannel.send(sayDescription(deferredFinished))
+		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(ActorMessage.Back(deferredFinished))
+		actorChannel.send(ActorMessage.Skip(deferredFinished))
+
+		verify(bot).sendMessage(chatId, TAGS)
+		verify(bot).sendMessage(chatId, tagsExistMessage(tags))
+		verify(bot, never()).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
+		assertThat(deferredFinished.isActive)
+		actorChannel.close()
+	}
+
+	@Test
+	fun whenSkipOnEmptyValuesThenCanBeSkipped() = runBlockingTest {
+		val client = mock<Client> {
+			on { getUser(userId) } doReturn user
+			on { createAction(user.id, defaultActionRequest(values = emptyList())) } doReturn Either.Right(actionId)
+		}
+		val deferredFinished = CompletableDeferred<Boolean>()
+
+		val actorChannel = CreateActionActor.yield(actorContext(client))
+		actorChannel.send(sayDescription(deferredFinished))
+		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(ActorMessage.Skip(deferredFinished))
+
+		verify(client).createAction(user.id, defaultActionRequest(values = emptyList()))
+		verify(bot).sendMessage(chatId, INIT_ACTION_TEXT)
+		verify(bot).sendMessage(chatId, TAGS)
+		verify(bot).sendMessage(chatId, VALUES)
+		verify(bot, never()).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
+		verify(bot).sendMessage(chatId, ACTION_SUCCESS)
+		assertThat(deferredFinished.await())
 		actorChannel.close()
 	}
 
@@ -89,7 +152,7 @@ class CreateActionActorTest {
 		val deferredFinished = CompletableDeferred<Boolean>()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(ActorMessage.Say(description, deferredFinished))
+		actorChannel.send(sayDescription(deferredFinished))
 		actorChannel.send(ActorMessage.Back(deferredFinished))
 
 		verify(bot).sendMessage(chatId, descriptionExistMessage(description))
@@ -98,7 +161,7 @@ class CreateActionActorTest {
 	}
 
 	@Test
-	fun whenSkipOnDescriptionAfterFillingInAndComingBackFromTagThenCanBeSkipped() = runBlockingTest {
+	fun whenSkipOnNotEmptyDescriptionThenCanBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
@@ -106,7 +169,7 @@ class CreateActionActorTest {
 		val deferredFinished = CompletableDeferred<Boolean>()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(ActorMessage.Say(description, deferredFinished))
+		actorChannel.send(sayDescription(deferredFinished))
 		actorChannel.send(ActorMessage.Back(deferredFinished))
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
 
@@ -117,7 +180,7 @@ class CreateActionActorTest {
 	}
 
 	@Test
-	fun whenFillingInDescriptionAndComingBackFromTagThenUpdated() = runBlockingTest {
+	fun whenNotEmptyDescriptionAndComingBackFromTagThenUpdated() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest(anotherDescription)) } doReturn Either.Right(actionId)
@@ -125,10 +188,11 @@ class CreateActionActorTest {
 		val deferredFinished = CompletableDeferred<Boolean>()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(ActorMessage.Say(description, deferredFinished))
+		actorChannel.send(sayDescription(deferredFinished))
 		actorChannel.send(ActorMessage.Back(deferredFinished))
 		actorChannel.send(ActorMessage.Say(anotherDescription, deferredFinished))
-		actorChannel.send(ActorMessage.Say(tagsText, deferredFinished))
+		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(sayValue(deferredFinished))
 
 		verify(client).getUser(userId)
 		verify(client).createAction(user.id, defaultActionRequest(anotherDescription))
@@ -141,13 +205,26 @@ class CreateActionActorTest {
 		actorChannel.close()
 	}
 
+	private fun sayTags(deferredFinished: CompletableDeferred<Boolean>) =
+		ActorMessage.Say(tagsText, deferredFinished)
+
+	private fun sayDescription(deferredFinished: CompletableDeferred<Boolean>) =
+		ActorMessage.Say(description, deferredFinished)
+
+	private fun sayValue(deferredFinished: CompletableDeferred<Boolean>) =
+		ActorMessage.Say(value, deferredFinished)
+
 	private fun TestCoroutineScope.actorContext(client: Client) =
 		ActorContext(chatId, userId, bot, this, client)
 
-	private fun defaultActionRequest(description: String = "description"): ActionRequest {
+	private fun defaultActionRequest(
+		description: String = "description",
+		values: List<Value> = listOf(Value(ValueType.Mood, "5", "mood"))
+	): ActionRequest {
 		return ActionRequest(
 			description,
-			listOf(TagRequest.fromString("tag1"), TagRequest.fromString("tag2"))
+			listOf(TagRequest.fromString("tag1"), TagRequest.fromString("tag2")),
+			values
 		)
 	}
 }
