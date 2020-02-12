@@ -132,20 +132,8 @@ object CreateActionActor : Actor {
 					else -> sendMessage(ACTION_FAILED)
 				}
 				message.complete()
-				return terminatedReceiver()
+				return TerminatedReceiver
 			}
-		}
-
-		private fun terminatedReceiver(): Receiver = object : Receiver {
-			override fun say(message: ActorMessage.Say): Receiver = complete(message)
-			override fun back(message: ActorMessage.Back): Receiver = complete(message)
-			override fun skip(message: ActorMessage.Skip): Receiver = complete(message)
-
-			private fun complete(message: ActorMessage): Receiver {
-				message.completeExceptionally(IllegalStateException("We are done already!"))
-				return this
-			}
-
 		}
 
 		fun sendMessage(text: String) = ctx.bot.sendMessage(ctx.chatId, text)
@@ -164,10 +152,4 @@ object CreateActionActor : Actor {
 			}
 		}
 	}
-}
-
-interface Receiver {
-	fun say(message: ActorMessage.Say): Receiver
-	fun back(message: ActorMessage.Back): Receiver
-	fun skip(message: ActorMessage.Skip): Receiver
 }

@@ -22,3 +22,20 @@ sealed class ActorMessage(val deferred: CompletableDeferred<Boolean>) {
 	fun completeExceptionally(exception: Throwable) = deferred.completeExceptionally(exception)
 	fun unComplete() = deferred.complete(false)
 }
+
+interface Receiver {
+	fun say(message: ActorMessage.Say): Receiver
+	fun back(message: ActorMessage.Back): Receiver
+	fun skip(message: ActorMessage.Skip): Receiver
+}
+
+object TerminatedReceiver : Receiver {
+	override fun say(message: ActorMessage.Say): Receiver = complete(message)
+	override fun back(message: ActorMessage.Back): Receiver = complete(message)
+	override fun skip(message: ActorMessage.Skip): Receiver = complete(message)
+
+	private fun complete(message: ActorMessage): Receiver {
+		message.completeExceptionally(IllegalStateException("We are done already!"))
+		return this
+	}
+}
