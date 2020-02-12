@@ -50,7 +50,7 @@ object CreateActionActor : Actor {
 		private var values: List<Value> = emptyList()
 	) {
 
-		private fun descriptionReceiver(): Receiver = object : Receiver {
+		private fun descriptionReceiver(): Receiver = object : LocalReceiver(cancel()) {
 			override fun say(message: ActorMessage.Say): Receiver {
 				actionDescription = message.text
 				//send message: Enter duration
@@ -76,11 +76,9 @@ object CreateActionActor : Actor {
 					tagsReceiver()
 				}
 			}
-
-			override fun cancel(message: ActorMessage.Cancel): Receiver = message.cancel()
 		}
 
-		private fun tagsReceiver(): Receiver = object : Receiver {
+		private fun tagsReceiver(): Receiver = object : LocalReceiver(cancel()) {
 			override fun say(message: ActorMessage.Say): Receiver {
 				tags = message.text.splitToTags()
 				sendMessage(VALUES)
@@ -108,11 +106,9 @@ object CreateActionActor : Actor {
 					valuesReceiver()
 				}
 			}
-
-			override fun cancel(message: ActorMessage.Cancel): Receiver = message.cancel()
 		}
 
-		private fun valuesReceiver(): Receiver = object : Receiver {
+		private fun valuesReceiver(): Receiver = object : LocalReceiver(cancel()) {
 			override fun say(message: ActorMessage.Say): Receiver {
 				values = listOf(Value(ValueType.Mood, message.text, "mood"))
 				return createAction(message)
@@ -127,8 +123,6 @@ object CreateActionActor : Actor {
 				return createAction(message)
 			}
 
-			override fun cancel(message: ActorMessage.Cancel): Receiver = message.cancel()
-
 			private fun createAction(message: ActorMessage): Receiver {
 				when (createAction()) {
 					is Right -> sendMessage(ACTION_SUCCESS)
@@ -139,10 +133,15 @@ object CreateActionActor : Actor {
 			}
 		}
 
-		private fun ActorMessage.cancel(): Receiver {
+		abstract class LocalReceiver(private val cancelFun: (ActorMessage) -> Receiver) : Receiver {
+			override fun cancel(message: ActorMessage.Cancel): Receiver = message.cancel()
+			fun ActorMessage.cancel(): Receiver = cancelFun(this)
+		}
+
+		private fun cancel() = { message: ActorMessage ->
 			sendMessage(ACTION_CANCELLED_TEXT)
-			this.complete()
-			return TerminatedReceiver
+			message.complete()
+			TerminatedReceiver
 		}
 
 		fun sendMessage(text: String) = ctx.bot.sendMessage(ctx.chatId, text)
