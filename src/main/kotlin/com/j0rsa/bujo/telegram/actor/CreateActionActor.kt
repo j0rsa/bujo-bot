@@ -19,18 +19,16 @@ const val ACTION_FAILED = "Action was not registered \uD83D\uDE22"
 
 object CreateActionActor : Actor {
 	@UseExperimental(ObsoleteCoroutinesApi::class)
-	override fun yield(ctx: ActorContext) = with(ctx.scope) {
-		actor<ActorMessage> {
-			//INIT ACTOR
-			val actorSayMessage = ActorSayMessageReceiver.init(ctx)
-			//FINISH INIT
-			var receiver: (ActorMessage.Say) -> Boolean = actorSayMessage.receiver
+	override fun yield(ctx: ActorContext) = ctx.scope.actor<ActorMessage> {
+		//INIT ACTOR
+		val actorSayMessage = ActorSayMessageReceiver.init(ctx)
+		//FINISH INIT
+		var receiver: (ActorMessage.Say) -> Boolean = actorSayMessage.receiver
 
-			for (message in channel) {
-				if (message is ActorMessage.Say) {
-					receiver(message)
-					receiver = actorSayMessage.receiver
-				}
+		for (message in channel) {
+			if (message is ActorMessage.Say) {
+				receiver(message)
+				receiver = actorSayMessage.receiver
 			}
 		}
 	}
