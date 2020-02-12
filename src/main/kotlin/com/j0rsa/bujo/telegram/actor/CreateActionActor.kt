@@ -1,87 +1,162 @@
 package com.j0rsa.bujo.telegram.actor
 
-import com.j0rsa.bujo.telegram.api.TrackerClient
-import com.j0rsa.bujo.telegram.api.model.ActionRequest
-import com.j0rsa.bujo.telegram.api.model.TagRequest
-import kotlinx.coroutines.CoroutineScope
+import arrow.core.Either.Right
+import com.j0rsa.bujo.telegram.api.model.*
+import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.actor
-import me.ivmg.telegram.Bot
-import org.http4k.core.Status
 
 /**
  * @author red
  * @since 09.02.20
  */
+const val INIT_ACTION_TEXT = """You are creating an action\n
+                    Enter action description"""
+const val ACTION_CANCELLED_TEXT = "You canceled action creation"
+const val TAGS = "Enter actions tags (comma separated) or go /back"
+const val ACTION_SUCCESS = "Action was registered"
+const val ACTION_FAILED = "Action was not registered \uD83D\uDE22"
+const val CAN_NOT_BE_SKIPPED = "Cannot be skipped"
+const val VALUES = "Insert mood value from 1 to 5 or /skip"
 
 object CreateActionActor : Actor {
-    @UseExperimental(ObsoleteCoroutinesApi::class)
-    override fun yield(scope: CoroutineScope, bot: Bot, chatId: Long, userId: Long) = with(scope) {
-        actor<ActorMessage> {
-            val user = TrackerClient.getUser(userId)
-            var actionDescription = ""
+	fun descriptionExistMessage(s: String) = "Your description: $s. Enter action description or /skip"
+	fun tagsExistMessage(tags: List<TagRequest>) =
+		"Your tags: ${tags.joinToString(", ") { it.name }}. Enter tags or /skip"
 
-            //INIT ACTOR
-            bot.sendMessage(
-                chatId,
-                "You are creating an action\n" +
-                        "Enter action description"
-            )
-            //FINISH INIT
-            var state: CreateActionState = CreateActionState.ActionDescription
+	fun valuesExistMessage(values: List<Value>) =
+		"Your mood value: ${values.first().value}. Enter values or /skip"
 
-            for (message in channel) {
-                when (message) {
-                    is ActorMessage.Say ->
-                        when (state) {
-                            CreateActionState.ActionDescription -> {
-                                actionDescription = message.text
-                                state = CreateActionState.ActionTags
-                                //send message: Enter duration
-                                bot.sendMessage(
-                                    chatId,
-                                    "Enter actions tags (comma separated)"
-                                )
-                                // flow is not finished
-                                message.deferred.complete(false)
-                            }
-                            CreateActionState.ActionTags -> {
-                                //received last item
-                                val actionTags = message.text.split(",").map { TagRequest.fromString(it) }
-                                //call API
-                                when (TrackerClient.createAction(
-                                    user.id, ActionRequest(
-                                        actionDescription,
-                                        actionTags
-                                    )
-                                ).status) {
-                                    Status.OK, Status.CREATED ->
-                                        bot.sendMessage(
-                                            chatId,
-                                            "Action was registered"
-                                        )
-                                    else ->
-                                        bot.sendMessage(
-                                            chatId,
-                                            "Action was not registered 😢"
-                                        )
-                                }
-                                state = CreateActionState.Terminated
-                                message.deferred.complete(true)
-                            }
+	@UseExperimental(ObsoleteCoroutinesApi::class)
+	override fun yield(ctx: ActorContext) = ctx.scope.actor<ActorMessage> {
+		//INIT ACTOR
+		var receiver: Receiver = ActorSayMessageReceiver.init(ctx)
 
-                            CreateActionState.Terminated -> {
-                                message.deferred.completeExceptionally(IllegalStateException("We are done already!"))
-                            }
-                        }
-                }
-            }
-        }
-    }
-}
+		for (message in channel) {
+			receiver = when (message) {
+				is ActorMessage.Say -> receiver.say(message)
+				is ActorMessage.Back -> receiver.back(message)
+				is ActorMessage.Skip -> receiver.skip(message)
+				is ActorMessage.Cancel -> receiver.cancel(message)
+			}
+		}
+	}
 
-sealed class CreateActionState {
-    object ActionDescription : CreateActionState()
-    object ActionTags : CreateActionState()
-    object Terminated : CreateActionState()
+	private data class ActorSayMessageReceiver(
+		private val user: User,
+		private val ctx: ActorContext,
+		private var actionDescription: String = "",
+		private var tags: List<TagRequest> = emptyList(),
+		private var values: List<Value> = emptyList()
+	) {
+
+		private fun descriptionReceiver(): Receiver = object : LocalReceiver(cancel()) {
+			override fun say(message: ActorMessage.Say): Receiver {
+				actionDescription = message.text
+				//send message: Enter duration
+				sendMessage(TAGS)
+				// flow is not finished
+				message.unComplete()
+				return tagsReceiver()
+			}
+
+			override fun back(message: ActorMessage.Back): Receiver = message.cancel()
+
+			override fun skip(message: ActorMessage.Skip): Receiver = when {
+				actionDescription.isEmpty() -> {
+					sendMessage(CAN_NOT_BE_SKIPPED)
+					this
+				}
+				tags.isNotEmpty() -> {
+					sendMessage(tagsExistMessage(tags))
+					tagsReceiver()
+				}
+				else -> {
+					sendMessage(TAGS)
+					tagsReceiver()
+				}
+			}.also { message.unComplete() }
+		}
+
+		private fun tagsReceiver(): Receiver = object : LocalReceiver(cancel()) {
+			override fun say(message: ActorMessage.Say): Receiver {
+				tags = message.text.splitToTags()
+				sendMessage(VALUES)
+				message.unComplete()
+				return valuesReceiver()
+			}
+
+			override fun back(message: ActorMessage.Back): Receiver {
+				sendMessage(descriptionExistMessage(actionDescription))
+				message.unComplete()
+				return descriptionReceiver()
+			}
+
+			override fun skip(message: ActorMessage.Skip): Receiver = when {
+				tags.isEmpty() -> {
+					sendMessage(CAN_NOT_BE_SKIPPED)
+					this
+				}
+				values.isNotEmpty() -> {
+					sendMessage(valuesExistMessage(values))
+					valuesReceiver()
+				}
+				else -> {
+					sendMessage(VALUES)
+					valuesReceiver()
+				}
+			}.also { message.unComplete() }
+		}
+
+		private fun valuesReceiver(): Receiver = object : LocalReceiver(cancel()) {
+			override fun say(message: ActorMessage.Say): Receiver {
+				values = listOf(Value(ValueType.Mood, message.text, "mood"))
+				return createAction(message)
+			}
+
+			override fun back(message: ActorMessage.Back): Receiver {
+				sendMessage(tagsExistMessage(tags))
+				message.unComplete()
+				return tagsReceiver()
+			}
+
+			override fun skip(message: ActorMessage.Skip): Receiver = createAction(message)
+
+			private fun createAction(message: ActorMessage): Receiver {
+				when (createAction()) {
+					is Right -> sendMessage(ACTION_SUCCESS)
+					else -> sendMessage(ACTION_FAILED)
+				}
+				message.complete()
+				return TerminatedReceiver
+			}
+		}
+
+		abstract class LocalReceiver(private val cancelFun: (ActorMessage) -> Receiver) : Receiver {
+			override fun cancel(message: ActorMessage.Cancel): Receiver = message.cancel()
+			fun ActorMessage.cancel(): Receiver = cancelFun(this)
+		}
+
+		private fun cancel() = { message: ActorMessage ->
+			sendMessage(ACTION_CANCELLED_TEXT)
+			message.complete()
+			TerminatedReceiver
+		}
+
+		fun sendMessage(text: String) = ctx.bot.sendMessage(ctx.chatId, text)
+
+		private fun createAction() =
+			ctx.client.createAction(user.id, ActionRequest(actionDescription, tags, values))
+
+		private fun String.splitToTags() = this.split(",").map { TagRequest.fromString(it) }
+
+		companion object {
+			fun init(ctx: ActorContext): Receiver {
+				val user = ctx.client.getUser(ctx.userId)
+				val actor = ActorSayMessageReceiver(user, ctx)
+				actor.sendMessage(INIT_ACTION_TEXT)
+				return actor.descriptionReceiver()
+			}
+		}
+	}
 }
