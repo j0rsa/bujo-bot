@@ -42,7 +42,7 @@ object CreateActionActor : Actor {
 		private val ctx: ActorContext,
 		private var actionDescription: String = ""
 	) {
-		var receiver: ((ActorMessage.Say) -> Boolean) = descriptionReceiver()
+		var receiver: (ActorMessage.Say) -> Boolean = descriptionReceiver()
 
 		private fun descriptionReceiver() = { message: ActorMessage.Say ->
 			receiver = tagsReceiver()
