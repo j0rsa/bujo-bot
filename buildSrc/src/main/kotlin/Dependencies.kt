@@ -39,9 +39,9 @@ object Libs {
     const val slf4jApi = "org.slf4j:slf4j-api:${Versions.slf4j}"
     const val logbackClassic = "ch.qos.logback:logback-classic:${Versions.logback}"
     const val logbackCore = "ch.qos.logback:logback-core:${Versions.logback}"
-    const val arrowFx = ("io.arrow-kt:arrow-fx:${Versions.arrow}")
-    const val arrowSyntax = ("io.arrow-kt:arrow-syntax:${Versions.arrow}")
-    const val arrowMeta = ("io.arrow-kt:arrow-meta:${Versions.arrow}")
+    const val arrowFx = "io.arrow-kt:arrow-fx:${Versions.arrow}"
+    const val arrowSyntax = "io.arrow-kt:arrow-syntax:${Versions.arrow}"
+    const val arrowMeta = "io.arrow-kt:arrow-meta:${Versions.arrow}"
 }
 
 
