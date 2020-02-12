@@ -114,7 +114,6 @@ object CreateActionActor : Actor {
 		private fun valuesReceiver(): Receiver = object : LocalReceiver(cancel()) {
 			override fun say(message: ActorMessage.Say): Receiver {
 				values = listOf(Value(ValueType.Mood, message.text, "mood"))
-				message.unComplete()
 				return createAction(message)
 			}
 

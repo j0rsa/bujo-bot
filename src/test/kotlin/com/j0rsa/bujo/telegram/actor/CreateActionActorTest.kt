@@ -35,11 +35,11 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription(deferredFinished))
-		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(sayDescription(deferred()))
+		actorChannel.send(sayTags(deferred()))
 		actorChannel.send(sayValue(deferredFinished))
 
 		verify(client).getUser(userId)
@@ -58,7 +58,7 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
@@ -74,10 +74,10 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription(deferredFinished))
+		actorChannel.send(sayDescription(deferred()))
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
 
 		verify(bot).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
@@ -91,12 +91,12 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription(deferredFinished))
-		actorChannel.send(sayTags(deferredFinished))
-		actorChannel.send(ActorMessage.Back(deferredFinished))
+		actorChannel.send(sayDescription(deferred()))
+		actorChannel.send(sayTags(deferred()))
+		actorChannel.send(ActorMessage.Back(deferred()))
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
 
 		verify(bot).sendMessage(chatId, TAGS)
@@ -112,11 +112,11 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest(values = emptyList())) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription(deferredFinished))
-		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(sayDescription(deferred()))
+		actorChannel.send(sayTags(deferred()))
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
 
 		verify(client).createAction(user.id, defaultActionRequest(values = emptyList()))
@@ -135,7 +135,7 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
 		actorChannel.send(ActorMessage.Back(deferredFinished))
@@ -151,10 +151,10 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription(deferredFinished))
+		actorChannel.send(sayDescription(deferred()))
 		actorChannel.send(ActorMessage.Back(deferredFinished))
 
 		verify(bot).sendMessage(chatId, descriptionExistMessage(description))
@@ -168,11 +168,11 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription(deferredFinished))
-		actorChannel.send(ActorMessage.Back(deferredFinished))
+		actorChannel.send(sayDescription(deferred()))
+		actorChannel.send(ActorMessage.Back(deferred()))
 		actorChannel.send(ActorMessage.Skip(deferredFinished))
 
 		verify(bot, times(2)).sendMessage(chatId, TAGS)
@@ -187,13 +187,13 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest(anotherDescription)) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription(deferredFinished))
-		actorChannel.send(ActorMessage.Back(deferredFinished))
-		actorChannel.send(ActorMessage.Say(anotherDescription, deferredFinished))
-		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(sayDescription(deferred()))
+		actorChannel.send(ActorMessage.Back(deferred()))
+		actorChannel.send(ActorMessage.Say(anotherDescription, deferred()))
+		actorChannel.send(sayTags(deferred()))
 		actorChannel.send(sayValue(deferredFinished))
 
 		verify(client).getUser(userId)
@@ -213,11 +213,11 @@ class CreateActionActorTest {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = CompletableDeferred<Boolean>()
+		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription(deferredFinished))
-		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(sayDescription(deferred()))
+		actorChannel.send(sayTags(deferred()))
 		actorChannel.send(ActorMessage.Cancel(deferredFinished))
 
 		verify(bot).sendMessage(chatId, ACTION_CANCELLED_TEXT)
@@ -225,6 +225,8 @@ class CreateActionActorTest {
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
+
+	private fun deferred() = CompletableDeferred<Boolean>()
 
 	private fun sayTags(deferredFinished: CompletableDeferred<Boolean>) =
 		ActorMessage.Say(tagsText, deferredFinished)
