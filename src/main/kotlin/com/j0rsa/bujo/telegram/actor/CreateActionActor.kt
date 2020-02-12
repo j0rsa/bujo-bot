@@ -137,17 +137,11 @@ object CreateActionActor : Actor {
 		}
 
 		private fun terminatedReceiver(): Receiver = object : Receiver {
-			override fun say(message: ActorMessage.Say): Receiver {
-				message.completeExceptionally(IllegalStateException("We are done already!"))
-				return this
-			}
+			override fun say(message: ActorMessage.Say): Receiver = complete(message)
+			override fun back(message: ActorMessage.Back): Receiver = complete(message)
+			override fun skip(message: ActorMessage.Skip): Receiver = complete(message)
 
-			override fun back(message: ActorMessage.Back): Receiver {
-				message.completeExceptionally(IllegalStateException("We are done already!"))
-				return this
-			}
-
-			override fun skip(message: ActorMessage.Skip): Receiver {
+			private fun complete(message: ActorMessage): Receiver {
 				message.completeExceptionally(IllegalStateException("We are done already!"))
 				return this
 			}
