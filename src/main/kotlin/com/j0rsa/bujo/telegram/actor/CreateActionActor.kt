@@ -75,7 +75,7 @@ object CreateActionActor : Actor {
 					sendMessage(TAGS)
 					tagsReceiver()
 				}
-			}
+			}.also { message.unComplete() }
 		}
 
 		private fun tagsReceiver(): Receiver = object : LocalReceiver(cancel()) {
@@ -95,20 +95,17 @@ object CreateActionActor : Actor {
 			override fun skip(message: ActorMessage.Skip): Receiver = when {
 				tags.isEmpty() -> {
 					sendMessage(CAN_NOT_BE_SKIPPED)
-					message.unComplete()
 					this
 				}
 				values.isNotEmpty() -> {
 					sendMessage(valuesExistMessage(values))
-					message.unComplete()
 					valuesReceiver()
 				}
 				else -> {
 					sendMessage(VALUES)
-					message.unComplete()
 					valuesReceiver()
 				}
-			}
+			}.also { message.unComplete() }
 		}
 
 		private fun valuesReceiver(): Receiver = object : LocalReceiver(cancel()) {
