@@ -133,8 +133,8 @@ object AddValueActor {
 		fun sendMessage(text: String, replyMarkup: ReplyMarkup? = null) =
 			ctx.bot.sendMessage(ctx.chatId, text, replyMarkup = replyMarkup)
 
-		fun valueAddedMessage(valueId: ValueId) =
-			ctx.bot.valueAddedMessage(ctx.chatId, actionId, valueId)
+		fun valueAddedMessage(newActionId: ActionId) =
+			ctx.bot.valueAddedMessage(ctx.chatId, newActionId)
 
 		companion object {
 			fun init(

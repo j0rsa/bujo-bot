@@ -18,6 +18,7 @@ object RequestLens {
     val actionLens = Body.auto<Action>().toLens()
     val actionIdLens = Body.auto<ActionId>().toLens()
     val actionRequestLens = Body.auto<ActionRequest>().toLens()
+    val valueRequestLens = Body.auto<Value>().toLens()
     val multipleActionLens = Body.auto<List<Action>>().toLens()
     val telegramUserIdLens = Body.auto<UserId>().toLens()
     val telegramUserCreateLens = Body.auto<CreateUserRequest>().toLens()

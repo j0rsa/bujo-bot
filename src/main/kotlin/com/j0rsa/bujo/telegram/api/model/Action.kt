@@ -27,12 +27,6 @@ inline class ActionId(val value: UUID) {
 	}
 }
 
-inline class ValueId(val value: UUID) {
-	companion object {
-		fun randomValue() = ValueId(UUID.randomUUID())
-	}
-}
-
 data class Value(
 	val type: ValueType,
 	val value: String?,

@@ -25,7 +25,6 @@ internal class AddValueActorTest {
 	private val bot = mock<Bot>()
 	private val user = User(UserId.randomValue(), 1L)
 	private val actionId = ActionId.randomValue()
-	private val valueId = ValueId.randomValue()
 	private val defaultName = "Mood"
 	private val defaultType = ValueType.Mood
 	private val defaultValue = "5"
@@ -36,7 +35,7 @@ internal class AddValueActorTest {
 	fun testSuccessAddValue() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
-			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(valueId)
+			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 		val deferredFinished = deferred()
 
@@ -50,7 +49,7 @@ internal class AddValueActorTest {
 		verify(bot).sendMessage(chatId, INIT_ADD_ACTION_VALUE, replyMarkup = valueTypeMarkup())
 		verify(bot).sendMessage(chatId, defaultNameMessage())
 		verify(bot).sendMessage(chatId, defaultValueMessage(), replyMarkup = defaultValueMarkup())
-		verify(bot).valueAddedMessage(chatId, actionId, valueId)
+		verify(bot).valueAddedMessage(chatId, actionId)
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
@@ -76,7 +75,7 @@ internal class AddValueActorTest {
 	fun canGoBackToTypeAndChangeItThenAddValueWithAnotherType() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
-			on { addValue(user.id, actionId, defaultValue(type = anotherType)) } doReturn Either.Right(valueId)
+			on { addValue(user.id, actionId, defaultValue(type = anotherType)) } doReturn Either.Right(actionId)
 		}
 		val deferredFinished = deferred()
 
@@ -90,7 +89,7 @@ internal class AddValueActorTest {
 		verify(client).getUser(userId)
 		verify(client).addValue(user.id, actionId, defaultValue(type = anotherType))
 		verify(bot).sendMessage(chatId, typeExistMessage(defaultType), replyMarkup = valueTypeMarkup())
-		verify(bot).valueAddedMessage(chatId, actionId, valueId)
+		verify(bot).valueAddedMessage(chatId, actionId)
 
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
@@ -101,7 +100,7 @@ internal class AddValueActorTest {
 	fun canGoBackToTypeAndSkipItThenAddValueWithDefaultType() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
-			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(valueId)
+			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 		val deferredFinished = deferred()
 
@@ -115,7 +114,7 @@ internal class AddValueActorTest {
 		verify(client).getUser(userId)
 		verify(client).addValue(user.id, actionId, defaultValue())
 		verify(bot, never()).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
-		verify(bot).valueAddedMessage(chatId, actionId, valueId)
+		verify(bot).valueAddedMessage(chatId, actionId)
 
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
@@ -125,7 +124,7 @@ internal class AddValueActorTest {
 	fun canGoBackToNameAndChangeItThenAddValueWithAnotherName() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
-			on { addValue(user.id, actionId, defaultValue(name = anotherName)) } doReturn Either.Right(valueId)
+			on { addValue(user.id, actionId, defaultValue(name = anotherName)) } doReturn Either.Right(actionId)
 		}
 		val deferredFinished = deferred()
 
@@ -139,7 +138,7 @@ internal class AddValueActorTest {
 		verify(client).getUser(userId)
 		verify(client).addValue(user.id, actionId, defaultValue(name = anotherName))
 		verify(bot).sendMessage(chatId, defaultName.notEmptyMessage())
-		verify(bot).valueAddedMessage(chatId, actionId, valueId)
+		verify(bot).valueAddedMessage(chatId, actionId)
 
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
@@ -165,7 +164,7 @@ internal class AddValueActorTest {
 	fun valueCanNotBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
-			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(valueId)
+			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 		val deferredFinished = deferred()
 
@@ -181,7 +180,7 @@ internal class AddValueActorTest {
 		verify(bot).sendMessage(chatId, defaultNameMessage())
 		verify(bot).sendMessage(chatId, defaultValueMessage(), replyMarkup = defaultValueMarkup())
 		verify(bot).sendMessage(chatId, CAN_NOT_BE_SKIPPED)
-		verify(bot).valueAddedMessage(chatId, actionId, valueId)
+		verify(bot).valueAddedMessage(chatId, actionId)
 
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
@@ -191,7 +190,7 @@ internal class AddValueActorTest {
 	fun whenSkipNameThenAddWithDefaultName() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
-			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(valueId)
+			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 		val deferredFinished = deferred()
 

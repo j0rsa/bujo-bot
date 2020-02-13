@@ -1,10 +1,8 @@
 package com.j0rsa.bujo.telegram
 
-import com.google.gson.Gson
 import com.j0rsa.bujo.telegram.actor.ACTION_SUCCESS
 import com.j0rsa.bujo.telegram.actor.ADD_VALUE_ACTION_SUCCESS
 import com.j0rsa.bujo.telegram.api.model.ActionId
-import com.j0rsa.bujo.telegram.api.model.ValueId
 import com.j0rsa.bujo.telegram.api.model.ValueType
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.InlineKeyboardButton
@@ -35,7 +33,7 @@ interface Bot {
 
 	fun actionCreatedMessage(chatId: ChatId, actionId: ActionId)
 	fun editMessageWithValueType(chatId: ChatId, messageId: Long?, text: String)
-	fun valueAddedMessage(chatId: ChatId, actionId: ActionId, valueId: ValueId)
+	fun valueAddedMessage(chatId: ChatId, actionId: ActionId)
 }
 
 class BujoBot(val bot: Bot) : com.j0rsa.bujo.telegram.Bot {
@@ -83,7 +81,7 @@ class BujoBot(val bot: Bot) : com.j0rsa.bujo.telegram.Bot {
 		bot.editMessageText(chatId.value, messageId, text = text, replyMarkup = valueTypeMarkup())
 	}
 
-	override fun valueAddedMessage(chatId: ChatId, actionId: ActionId, valueId: ValueId) {
+	override fun valueAddedMessage(chatId: ChatId, actionId: ActionId) {
 		bot.sendMessage(chatId = chatId.value, text = ADD_VALUE_ACTION_SUCCESS, replyMarkup = createdAction(actionId))
 	}
 

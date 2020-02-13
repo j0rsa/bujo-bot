@@ -12,6 +12,7 @@ import com.j0rsa.bujo.telegram.api.RequestLens.multipleHabitsLens
 import com.j0rsa.bujo.telegram.api.RequestLens.telegramUserCreateLens
 import com.j0rsa.bujo.telegram.api.RequestLens.telegramUserIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.userLens
+import com.j0rsa.bujo.telegram.api.RequestLens.valueRequestLens
 import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.monad.Client
 import okhttp3.OkHttpClient
@@ -75,8 +76,12 @@ object TrackerClient : Client {
 		}
 	}
 
-	override fun addValue(userId: UserId, actionId: ActionId, value: Value): Either<BotError, ValueId> {
-		TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+	override fun addValue(userId: UserId, actionId: ActionId, value: Value): Either<BotError, ActionId> {
+		val response = client(valueRequestLens(value, "/actions/${actionId.value}/value".post().with(userId)))
+		return when (response.status) {
+			Status.OK, Status.CREATED -> Either.Right(actionIdLens(response))
+			else -> Either.Left(NotCreated)
+		}
 	}
 
 	private fun Request.with(userId: UserId) =
