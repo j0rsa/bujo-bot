@@ -24,9 +24,6 @@ object CreateActionActor : Actor {
 	fun tagsExistMessage(tags: List<TagRequest>) =
 		"Your tags: ${tags.joinToString(", ") { it.name }}. Enter tags or /skip"
 
-	fun valuesExistMessage(values: List<Value>) =
-		"Your mood value: ${values.first().value}. Enter values or /skip"
-
 	@UseExperimental(ObsoleteCoroutinesApi::class)
 	override fun yield(ctx: ActorContext) = ctx.scope.actor<ActorMessage> {
 		//INIT ACTOR
@@ -46,8 +43,7 @@ object CreateActionActor : Actor {
 		private val user: User,
 		private val ctx: ActorContext,
 		private var actionDescription: String = "",
-		private var tags: List<TagRequest> = emptyList(),
-		private var values: List<Value> = emptyList()
+		private var tags: List<TagRequest> = emptyList()
 	) {
 
 		private fun descriptionReceiver(): Receiver = object : LocalReceiver(cancel()) {
@@ -67,10 +63,6 @@ object CreateActionActor : Actor {
 					sendMessage(CAN_NOT_BE_SKIPPED)
 					this
 				}
-				tags.isNotEmpty() -> {
-					sendMessage(tagsExistMessage(tags))
-					tagsReceiver()
-				}
 				else -> {
 					sendMessage(TAGS)
 					tagsReceiver()
@@ -81,9 +73,7 @@ object CreateActionActor : Actor {
 		private fun tagsReceiver(): Receiver = object : LocalReceiver(cancel()) {
 			override fun say(message: ActorMessage.Say): Receiver {
 				tags = message.text.splitToTags()
-				sendMessage(VALUES)
-				message.unComplete()
-				return valuesReceiver()
+				return createAction(message)
 			}
 
 			override fun back(message: ActorMessage.Back): Receiver {
@@ -92,44 +82,20 @@ object CreateActionActor : Actor {
 				return descriptionReceiver()
 			}
 
-			override fun skip(message: ActorMessage.Skip): Receiver = when {
-				tags.isEmpty() -> {
-					sendMessage(CAN_NOT_BE_SKIPPED)
-					this
-				}
-				values.isNotEmpty() -> {
-					sendMessage(valuesExistMessage(values))
-					valuesReceiver()
-				}
-				else -> {
-					sendMessage(VALUES)
-					valuesReceiver()
-				}
-			}.also { message.unComplete() }
+			override fun skip(message: ActorMessage.Skip): Receiver {
+				message.unComplete()
+				sendMessage(CAN_NOT_BE_SKIPPED)
+				return this
+			}
 		}
 
-		private fun valuesReceiver(): Receiver = object : LocalReceiver(cancel()) {
-			override fun say(message: ActorMessage.Say): Receiver {
-				values = listOf(Value(ValueType.Mood, message.text, "mood"))
-				return createAction(message)
+		private fun createAction(message: ActorMessage): Receiver {
+			message.complete()
+			when (createAction()) {
+				is Right -> sendMessage(ACTION_SUCCESS)
+				else -> sendMessage(ACTION_FAILED)
 			}
-
-			override fun back(message: ActorMessage.Back): Receiver {
-				sendMessage(tagsExistMessage(tags))
-				message.unComplete()
-				return tagsReceiver()
-			}
-
-			override fun skip(message: ActorMessage.Skip): Receiver = createAction(message)
-
-			private fun createAction(message: ActorMessage): Receiver {
-				when (createAction()) {
-					is Right -> sendMessage(ACTION_SUCCESS)
-					else -> sendMessage(ACTION_FAILED)
-				}
-				message.complete()
-				return TerminatedReceiver
-			}
+			return TerminatedReceiver
 		}
 
 		abstract class LocalReceiver(private val cancelFun: (ActorMessage) -> Receiver) : Receiver {
@@ -146,7 +112,7 @@ object CreateActionActor : Actor {
 		fun sendMessage(text: String) = ctx.bot.sendMessage(ctx.chatId, text)
 
 		private fun createAction() =
-			ctx.client.createAction(user.id, ActionRequest(actionDescription, tags, values))
+			ctx.client.createAction(user.id, ActionRequest(actionDescription, tags))
 
 		private fun String.splitToTags() = this.split(",").map { TagRequest.fromString(it) }
 

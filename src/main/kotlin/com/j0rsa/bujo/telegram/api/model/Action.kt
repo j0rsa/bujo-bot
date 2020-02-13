@@ -9,8 +9,7 @@ import java.util.*
 
 data class ActionRequest(
 	val description: String,
-	val tags: List<TagRequest>,
-	val values: List<Value>
+	val tags: List<TagRequest>
 )
 
 data class Action(
