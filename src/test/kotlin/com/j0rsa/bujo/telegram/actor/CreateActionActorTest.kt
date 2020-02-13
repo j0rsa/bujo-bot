@@ -5,8 +5,9 @@ import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import com.j0rsa.bujo.telegram.Bot
+import com.j0rsa.bujo.telegram.BotUserId
+import com.j0rsa.bujo.telegram.ChatId
 import com.j0rsa.bujo.telegram.actor.CreateActionActor.descriptionExistMessage
-import com.j0rsa.bujo.telegram.actor.CreateActionActor.tagsExistMessage
 import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import com.j0rsa.bujo.telegram.monad.Client
@@ -18,8 +19,8 @@ import org.junit.Test
 
 @ExperimentalCoroutinesApi
 class CreateActionActorTest {
-	private val chatId = 10L
-	private val userId = 1L
+	private val chatId = ChatId(10L)
+	private val userId = BotUserId(1L)
 	private val bot = mock<Bot>()
 	private val user = User(UserId.randomValue(), 1L)
 	private val actionId = ActionId.randomValue()
@@ -44,7 +45,7 @@ class CreateActionActorTest {
 		verify(client).createAction(user.id, defaultActionRequest())
 		verify(bot).sendMessage(chatId, INIT_ACTION_TEXT)
 		verify(bot).sendMessage(chatId, TAGS)
-		verify(bot).sendMessage(chatId, ACTION_SUCCESS)
+		verify(bot).actionCreatedMessage(chatId, actionId)
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
@@ -153,7 +154,7 @@ class CreateActionActorTest {
 		verify(bot).sendMessage(chatId, INIT_ACTION_TEXT)
 		verify(bot, times(2)).sendMessage(chatId, TAGS)
 		verify(bot).sendMessage(chatId, descriptionExistMessage(description))
-		verify(bot).sendMessage(chatId, ACTION_SUCCESS)
+		verify(bot).actionCreatedMessage(chatId, actionId)
 
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()

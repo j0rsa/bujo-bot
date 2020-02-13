@@ -23,6 +23,13 @@ data class Action(
 inline class ActionId(val value: UUID) {
 	companion object {
 		fun randomValue() = ActionId(UUID.randomUUID())
+		fun fromString(s: String) = ActionId(UUID.fromString(s))
+	}
+}
+
+inline class ValueId(val value: UUID) {
+	companion object {
+		fun randomValue() = ValueId(UUID.randomUUID())
 	}
 }
 

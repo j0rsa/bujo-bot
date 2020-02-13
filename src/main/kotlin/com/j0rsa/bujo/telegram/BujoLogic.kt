@@ -1,10 +1,13 @@
 package com.j0rsa.bujo.telegram
 
+import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.actor.ActorMessage
+import com.j0rsa.bujo.telegram.actor.AddValueActor
 import com.j0rsa.bujo.telegram.actor.CreateActionActor
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
+import com.j0rsa.bujo.telegram.api.model.UserId
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
@@ -19,7 +22,7 @@ import java.math.BigDecimal
  */
 
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
-	private val userActors = mutableMapOf<Long, SendChannel<ActorMessage>>()
+	private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
 	fun showMenu(bot: Bot, update: Update) {
 		update.message?.let { message ->
 			val text = if (TrackerClient.health()) {
@@ -95,21 +98,15 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 		}
 	}
 
-	fun handleActorMessage(update: Update) {
-		update.message?.let { message ->
-			message.from?.let { user ->
-				message.text?.let { text ->
-					launch {
-						userActors[user.id]?.let { actorChannel ->
-							val deferredFinished = CompletableDeferred<Boolean>()
-							if (!actorChannel.isClosedForSend) {
-								actorChannel.send(ActorMessage.Say(text, deferredFinished))
-								if (deferredFinished.await()) {
-									actorChannel.close()
-									userActors.remove(message.chat.id)
-								}
-							}
-						}
+	fun handleActorMessage(message: HandleActorMessage) {
+		launch {
+			userActors[message.userId]?.let { actorChannel ->
+				val deferredFinished = CompletableDeferred<Boolean>()
+				if (!actorChannel.isClosedForSend) {
+					actorChannel.send(ActorMessage.Say(message.text, deferredFinished))
+					if (deferredFinished.await()) {
+						actorChannel.close()
+						userActors.remove(message.userId)
 					}
 				}
 			}
@@ -120,7 +117,8 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 		update.message?.let { message ->
 			message.from?.let { user ->
 				launch {
-					userActors[user.id]?.let { actorChannel ->
+					val userId = BotUserId(user)
+					userActors[userId]?.let { actorChannel ->
 						val deferredFinished = CompletableDeferred<Boolean>()
 						if (!actorChannel.isClosedForSend) {
 							when (command) {
@@ -130,7 +128,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 							}
 							if (deferredFinished.await()) {
 								actorChannel.close()
-								userActors.remove(message.chat.id)
+								userActors.remove(userId)
 							}
 						}
 					}
@@ -148,7 +146,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 	fun showHabits(bot: Bot, update: Update) {
 		update.message?.let { message ->
 			message.from?.let { user ->
-				val trackerUser = TrackerClient.getUser(user.id)
+				val trackerUser = TrackerClient.getUser(BotUserId(user.id))
 				val habits = TrackerClient.getHabits(trackerUser.id)
 				bot.sendMessage(
 					message.chat.id,
@@ -164,19 +162,54 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
 	fun createAction(bot: Bot, update: Update) {
 		update.message?.let { message ->
-			message.from?.let {
+			message.from?.let { user: User ->
 				launch {
-					userActors[it.id]?.close()
+					val userId = BotUserId(user)
+					userActors[userId]?.close()
 					userActors.put(
-						it.id,
-						CreateActionActor.yield(ActorContext(message.chat.id, it.id, bot, this))
+						userId,
+						CreateActionActor.yield(ActorContext(ChatId(message), userId, BujoBot(bot), this))
 					)
 				}
 			}
 		}
 	}
 
+	fun addValue(message: CallbackMessage) {
+		launch {
+			userActors[message.userId]?.close()
+			userActors.put(
+				message.userId,
+				AddValueActor.yield(
+					message.callBackData,
+					message.toContext(this)
+				)
+			)
+		}
+	}
+
 }
+
+sealed class BotMessage(
+	val bot: BujoBot,
+	val chatId: ChatId,
+	val userId: BotUserId
+) {
+	class CallbackMessage(
+		bot: BujoBot,
+		userId: BotUserId,
+		chatId: ChatId,
+		val callBackData: String
+	) : BotMessage(bot, chatId, userId)
+
+	fun toContext(scope: CoroutineScope) = ActorContext(chatId, userId, bot, scope)
+}
+
+class HandleActorMessage(
+	val chatId: ChatId,
+	val userId: BotUserId,
+	val text: String
+)
 
 private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButton>> =
 	this.map { habitsInfo ->
@@ -188,5 +221,4 @@ private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButto
 		)
 	}
 
-private infix fun String.or(other: String) =
-	if (Math.random() < 0.5) this else other
+private infix fun String.or(other: String) = if (Math.random() < 0.5) this else other

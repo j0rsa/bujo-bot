@@ -27,7 +27,7 @@ object CreateActionActor : Actor {
 	@UseExperimental(ObsoleteCoroutinesApi::class)
 	override fun yield(ctx: ActorContext) = ctx.scope.actor<ActorMessage> {
 		//INIT ACTOR
-		var receiver: Receiver = ActorSayMessageReceiver.init(ctx)
+		var receiver: Receiver = MessageReceiver.init(ctx)
 
 		for (message in channel) {
 			receiver = when (message) {
@@ -39,7 +39,7 @@ object CreateActionActor : Actor {
 		}
 	}
 
-	private data class ActorSayMessageReceiver(
+	private data class MessageReceiver(
 		private val user: User,
 		private val ctx: ActorContext,
 		private var actionDescription: String = "",
@@ -91,8 +91,8 @@ object CreateActionActor : Actor {
 
 		private fun createAction(message: ActorMessage): Receiver {
 			message.complete()
-			when (createAction()) {
-				is Right -> sendMessage(ACTION_SUCCESS)
+			when (val result = createAction()) {
+				is Right -> sendSuccessMessage(result.b)
 				else -> sendMessage(ACTION_FAILED)
 			}
 			return TerminatedReceiver
@@ -110,6 +110,8 @@ object CreateActionActor : Actor {
 		}
 
 		fun sendMessage(text: String) = ctx.bot.sendMessage(ctx.chatId, text)
+		fun sendSuccessMessage(actionId: ActionId) =
+			ctx.bot.actionCreatedMessage(ctx.chatId, actionId)
 
 		private fun createAction() =
 			ctx.client.createAction(user.id, ActionRequest(actionDescription, tags))
@@ -119,7 +121,7 @@ object CreateActionActor : Actor {
 		companion object {
 			fun init(ctx: ActorContext): Receiver {
 				val user = ctx.client.getUser(ctx.userId)
-				val actor = ActorSayMessageReceiver(user, ctx)
+				val actor = MessageReceiver(user, ctx)
 				actor.sendMessage(INIT_ACTION_TEXT)
 				return actor.descriptionReceiver()
 			}
