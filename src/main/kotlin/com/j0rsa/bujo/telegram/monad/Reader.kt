@@ -48,4 +48,5 @@ interface Client {
 	fun getHabit(userId: UserId, habitId: HabitId): Habit
 	fun createAction(userId: UserId, actionRequest: ActionRequest): Either<BotError, ActionId>
 	fun addValue(userId: UserId, actionId: ActionId, value: Value): Either<BotError, ActionId>
+	fun getAction(userId: UserId, actionId: ActionId): Either<BotError, Action>
 }

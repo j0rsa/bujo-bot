@@ -2,6 +2,7 @@ package com.j0rsa.bujo.telegram
 
 import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.BujoLogic.ActorCommand.*
+import com.j0rsa.bujo.telegram.BujoLogic.addValue
 import com.j0rsa.bujo.telegram.BujoLogic.handleActorMessage
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.bot
@@ -38,51 +39,53 @@ class App {
 					val userId = BotUserId(message.from ?: return@message)
 					val text = message.text ?: return@message
 
-					handleActorMessage(HandleActorMessage(ChatId(message), userId, text))
+					handleActorMessage(HandleActorMessage(userId, ChatId(message), text))
 				}
 				callbackQuery(CALLBACK_ADD_VALUE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					val message = callbackQuery.message ?: return@callbackQuery
+					deleteMessage(bot, message)
 					addValueCallback(callbackQuery, message, bot)
 				}
 				callbackQuery(CALLBACK_ACTOR_TEMPLATE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					val message = callbackQuery.message ?: return@callbackQuery
-					actorsCallback(callbackQuery, message, bot)
+					deleteMessage(bot, message)
+					actorsCallback(callbackQuery, message)
+				}
+				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
+					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+					val message = callbackQuery.message ?: return@callbackQuery
+//					deleteMessage(bot, message)
+					editActionCallback(callbackQuery, message, bot)
 				}
 			}
 		}
 		bot.startPolling()
 	}
 
-	private fun addValueCallback(
-		callbackQuery: CallbackQuery,
-		message: Message,
-		bot: Bot
-	) {
+	private fun addValueCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
 		val userId = BotUserId(callbackQuery.from)
 		val data = parse(callbackQuery.data, CALLBACK_ADD_VALUE)
-		deleteMessage(bot, message)
 
-		BujoLogic.addValue(CallbackMessage(BujoBot(bot), userId, ChatId(message), data))
+		addValue(CallbackMessage(BujoBot(bot), userId, ChatId(message), data))
 	}
 
-	private fun actorsCallback(
-		callbackQuery: CallbackQuery,
-		message: Message,
-		bot: Bot
-	) {
+	private fun actorsCallback(callbackQuery: CallbackQuery, message: Message) {
 		val userId = BotUserId(callbackQuery.from)
 		val data = parse(callbackQuery.data, CALLBACK_ACTOR_TEMPLATE)
-		deleteMessage(bot, message)
 
-		handleActorMessage(HandleActorMessage(ChatId(message), userId, data))
+		handleActorMessage(HandleActorMessage(userId, ChatId(message), data))
 	}
 
-	private fun deleteMessage(
-		bot: Bot,
-		message: Message
-	) {
+	private fun editActionCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
+		val userId = BotUserId(callbackQuery.from)
+		val data = parse(callbackQuery.data, CALLBACK_VIEW_ACTION)
+
+		BujoLogic.editAction(CallbackMessage(BujoBot(bot), userId, ChatId(message), data))
+	}
+
+	private fun deleteMessage(bot: Bot, message: Message) {
 		bot.deleteMessage(message.chat.id, message.messageId)
 	}
 

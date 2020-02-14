@@ -1,11 +1,9 @@
 package com.j0rsa.bujo.telegram.api
 
 import arrow.core.Either
-import com.j0rsa.bujo.telegram.BotError
-import com.j0rsa.bujo.telegram.BotUserId
-import com.j0rsa.bujo.telegram.Config
-import com.j0rsa.bujo.telegram.NotCreated
+import com.j0rsa.bujo.telegram.*
 import com.j0rsa.bujo.telegram.api.RequestLens.actionIdLens
+import com.j0rsa.bujo.telegram.api.RequestLens.actionLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionRequestLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitLens
 import com.j0rsa.bujo.telegram.api.RequestLens.multipleHabitsLens
@@ -72,6 +70,15 @@ object TrackerClient : Client {
 		val response = client(actionRequestLens(actionRequest, "/actions".post().with(userId)))
 		return when (response.status) {
 			Status.OK, Status.CREATED -> Either.Right(actionIdLens(response))
+			else -> Either.Left(NotCreated)
+		}
+	}
+
+	override fun getAction(userId: UserId, actionId: ActionId): Either<BotError, Action> {
+		val response = client("/actions/${actionId.value}".get().with(userId))
+		return when (response.status) {
+			Status.OK -> Either.Right(actionLens(response))
+			Status.NOT_FOUND -> Either.Left(NotFound)
 			else -> Either.Left(NotCreated)
 		}
 	}

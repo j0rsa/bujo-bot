@@ -22,10 +22,7 @@ object AddValueActor {
 	fun typeExistMessage(type: ValueType) = "Your value type: ${type.name}. Enter type or /skip"
 	fun valueMessage(name: String) = "Enter value for $name or go /back"
 	@ObsoleteCoroutinesApi
-	fun yield(
-		data: String,
-		ctx: ActorContext
-	): SendChannel<ActorMessage> = ctx.scope.actor<ActorMessage> {
+	fun yield(data: String, ctx: ActorContext): SendChannel<ActorMessage> = ctx.scope.actor {
 		var receiver: Receiver = MessageReceiver.init(data, ctx)
 		for (message in channel) {
 			receiver = when (message) {

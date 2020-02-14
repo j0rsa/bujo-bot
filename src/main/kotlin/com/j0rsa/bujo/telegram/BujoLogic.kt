@@ -4,10 +4,10 @@ import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.actor.ActorMessage
 import com.j0rsa.bujo.telegram.actor.AddValueActor
 import com.j0rsa.bujo.telegram.actor.CreateActionActor
+import com.j0rsa.bujo.telegram.actor.EditActionActor
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
-import com.j0rsa.bujo.telegram.api.model.UserId
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
@@ -166,9 +166,8 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 				launch {
 					val userId = BotUserId(user)
 					userActors[userId]?.close()
-					userActors.put(
-						userId,
-						CreateActionActor.yield(ActorContext(ChatId(message), userId, BujoBot(bot), this))
+					userActors[userId] = CreateActionActor.yield(
+						ActorContext(ChatId(message), userId, BujoBot(bot), this)
 					)
 				}
 			}
@@ -178,13 +177,24 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 	fun addValue(message: CallbackMessage) {
 		launch {
 			userActors[message.userId]?.close()
-			userActors.put(
-				message.userId,
-				AddValueActor.yield(
-					message.callBackData,
-					message.toContext(this)
-				)
+			userActors[message.userId] = AddValueActor.yield(
+				message.callBackData,
+				message.toContext(this)
 			)
+		}
+	}
+
+	fun editAction(message: CallbackMessage) {
+		launch {
+			val deferredFinished = CompletableDeferred<Boolean>()
+			val actorMessage = ActorMessage.Say(message.callBackData, deferredFinished)
+			userActors[message.userId]?.close()
+			val channel = EditActionActor.yield(actorMessage, message.toContext(this))
+			if (deferredFinished.await()) {
+				channel.close()
+			} else {
+				userActors[message.userId] = channel
+			}
 		}
 	}
 
@@ -206,8 +216,8 @@ sealed class BotMessage(
 }
 
 class HandleActorMessage(
-	val chatId: ChatId,
 	val userId: BotUserId,
+	val chatId: ChatId,
 	val text: String
 )
 
