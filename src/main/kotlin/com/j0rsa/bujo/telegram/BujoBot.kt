@@ -111,11 +111,11 @@ private fun addValueButton(actionId: ActionId) =
 fun editAction(action: Action): InlineKeyboardMarkup = InlineKeyboardMarkup(
 	(listOf(
 		InlineKeyboardButton(text = "${action.description} ✏️", callbackData = "$TODO_TEMPLATE:1")
-	) + action.tags.map {
-		InlineKeyboardButton(text = "\uD83C\uDFF7 ${it.name} ❌", callbackData = "$TODO_TEMPLATE:1")
+	) + action.tags.mapIndexed { index, tag ->
+		InlineKeyboardButton(text = "\uD83C\uDFF7 ${tag.name} ❌", callbackData = "$TODO_TEMPLATE:$index")
 	} + listOf(InlineKeyboardButton(text = "+ 🏷️", callbackData = "$TODO_TEMPLATE:1"))
-			+ action.values.map {
-		InlineKeyboardButton(text = "${it.name}: ${it.value}️ ❌", callbackData = "$TODO_TEMPLATE:1")
+			+ action.values.mapIndexed { index, value ->
+		InlineKeyboardButton(text = "${value.name}: ${value.value}️ ❌", callbackData = "$TODO_TEMPLATE:$index")
 	} + listOf(addValueButton(action.id!!))).chunked(1)
 )
 
