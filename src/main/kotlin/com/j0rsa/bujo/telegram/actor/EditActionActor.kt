@@ -57,7 +57,7 @@ object EditActionActor {
 						TerminatedReceiver
 					}
 					is Either.Right -> {
-						message.unComplete()
+						message.complete()
 						val actor = MessageReceiver(user, result.b, ctx)
 						actor.sendMessage(initActionEdit(result.b), editAction(result.b))
 						TerminatedReceiver
