@@ -36,7 +36,7 @@ interface Bot {
 	fun valueAddedMessage(chatId: ChatId, actionId: ActionId)
 }
 
-class BujoBot(val bot: Bot) : com.j0rsa.bujo.telegram.Bot {
+class BujoBot(private val bot: Bot) : com.j0rsa.bujo.telegram.Bot {
 	override fun sendMessage(
 		chatId: ChatId,
 		text: String,
