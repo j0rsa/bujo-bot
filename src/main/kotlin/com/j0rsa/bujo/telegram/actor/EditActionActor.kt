@@ -14,8 +14,7 @@ const val ACTION_NOT_FOUND = "Action not found"
 
 object EditActionActor {
 	fun initActionEdit(action: Action) = """
-|Here's your action, you can edit it:
-|${action.description} 
+|Here's your action, you can edit it: ${action.description} 
 |🏷${action.tags.joinToString(", \uD83C\uDFF7") { it.name }}
 |${if (action.values.isNotEmpty()) "values: " else ""} ${action.values.map { "${it.name} - ${it.value}" }.joinToString("; ")}"""
 		.trimMargin()
