@@ -56,7 +56,7 @@ class App {
 				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					val message = callbackQuery.message ?: return@callbackQuery
-//					deleteMessage(bot, message)
+					deleteMessage(bot, message)
 					editActionCallback(callbackQuery, message, bot)
 				}
 			}
