@@ -13,7 +13,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
-import com.j0rsa.bujo.telegram.actor.StateMachineActor.Companion.getLocalizedMessage
 import kotlin.reflect.KProperty1
 
 @ObsoleteCoroutinesApi

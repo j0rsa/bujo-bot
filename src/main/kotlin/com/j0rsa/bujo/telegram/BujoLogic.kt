@@ -104,7 +104,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 			userActors[message.userId]?.let { actorChannel ->
 				val deferredFinished = CompletableDeferred<Boolean>()
 				if (!actorChannel.isClosedForSend) {
-					actorChannel.send(ActorMessage.Say(message.text, deferredFinished))
+					actorChannel.send(ActorMessage.Say(message.text.trim(), deferredFinished))
 					if (deferredFinished.await()) {
 						actorChannel.close()
 						userActors.remove(message.userId)
