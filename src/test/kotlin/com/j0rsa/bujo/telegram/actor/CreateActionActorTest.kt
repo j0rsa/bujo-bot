@@ -4,11 +4,7 @@ import arrow.core.Either
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import com.j0rsa.bujo.telegram.Bot
-import com.j0rsa.bujo.telegram.BotUserId
-import com.j0rsa.bujo.telegram.ChatId
-import com.j0rsa.bujo.telegram.actor.CreateActionActor.descriptionExistMessage
-import com.j0rsa.bujo.telegram.actor.CreateActionActor.descriptionExistMessage
+import com.j0rsa.bujo.telegram.*
 import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import com.j0rsa.bujo.telegram.monad.Client
@@ -17,7 +13,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
+import com.j0rsa.bujo.telegram.actor.StateMachineActor.Companion.getLocalizedMessage
+import kotlin.reflect.KProperty1
 
+@ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi
 class CreateActionActorTest {
 	private val chatId = ChatId(10L)
@@ -38,18 +37,22 @@ class CreateActionActorTest {
 		}
 		val deferredFinished = deferred()
 
-		val actorChannel = CreateActionActor.yield(actorContext(client))
+		val state = CreateActionState(actorContext(client))
+		val actorChannel = CreateActionActor.yield(state)
 		actorChannel.send(sayDescription())
 		actorChannel.send(sayTags(deferredFinished))
 
 		verify(client).getUser(userId)
 		verify(client).createAction(user.id, defaultActionRequest())
-		verify(bot).sendMessage(chatId, INIT_ACTION_TEXT)
-		verify(bot).sendMessage(chatId, TAGS)
-		verify(bot).actionCreatedMessage(chatId, actionId)
+		verify(bot).sendMessage(chatId, getLocalizedMessage(user, Lines::actionCreationInitMessage))
+		verify(bot).sendMessage(chatId, getLocalizedMessage(user, Lines::actionCreationTagsInput))
+		verify(bot).sendMessage(chatId, getLocalizedMessage(user, Lines::actionRegisteredMessage))
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
 	}
+
+	private fun getLocalizedMessage(user: User, line: KProperty1<Lines, String>): String =
+		line.get(BujoTalk.withLanguage(user.language))
 
 	@Test
 	fun whenSkipOnEmptyDescriptionThenCanNotBeSkipped() = runBlockingTest {
@@ -85,39 +88,6 @@ class CreateActionActorTest {
 	}
 
 	@Test
-	fun whenBackOnDescriptionThenCancelled() = runBlockingTest {
-		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
-			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
-		}
-		val deferredFinished = deferred()
-
-		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(back(deferredFinished))
-
-		verify(bot).sendMessage(chatId, ACTION_CANCELLED_TEXT)
-		assertThat(deferredFinished.await()).isTrue()
-		actorChannel.close()
-	}
-
-	@Test
-	fun whenBackOnTagsThenDescription() = runBlockingTest {
-		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
-			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
-		}
-		val deferredFinished = deferred()
-
-		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription())
-		actorChannel.send(back(deferredFinished))
-
-		verify(bot).sendMessage(chatId, descriptionExistMessage(description))
-		assertThat(deferredFinished.await()).isFalse()
-		actorChannel.close()
-	}
-
-	@Test
 	fun whenSkipOnNotEmptyDescriptionThenCanBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
@@ -136,48 +106,6 @@ class CreateActionActorTest {
 		actorChannel.close()
 	}
 
-	@Test
-	fun whenNotEmptyDescriptionAndComingBackFromTagThenUpdated() = runBlockingTest {
-		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
-			on { createAction(user.id, defaultActionRequest(anotherDescription)) } doReturn Either.Right(actionId)
-		}
-		val deferredFinished = deferred()
-
-		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription())
-		actorChannel.send(back())
-		actorChannel.send(ActorMessage.Say(anotherDescription, deferred()))
-		actorChannel.send(sayTags(deferredFinished))
-
-		verify(client).getUser(userId)
-		verify(client).createAction(user.id, defaultActionRequest(anotherDescription))
-		verify(bot).sendMessage(chatId, INIT_ACTION_TEXT)
-		verify(bot, times(2)).sendMessage(chatId, TAGS)
-		verify(bot).sendMessage(chatId, descriptionExistMessage(description))
-		verify(bot).actionCreatedMessage(chatId, actionId)
-
-		assertThat(deferredFinished.await()).isTrue()
-		actorChannel.close()
-	}
-
-	@Test
-	fun whenCancel() = runBlockingTest {
-		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
-			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
-		}
-		val deferredFinished = deferred()
-
-		val actorChannel = CreateActionActor.yield(actorContext(client))
-		actorChannel.send(sayDescription())
-		actorChannel.send(cancel(deferredFinished))
-
-		verify(bot).sendMessage(chatId, ACTION_CANCELLED_TEXT)
-		verify(client, never()).createAction(eq(user.id), any())
-		assertThat(deferredFinished.await()).isTrue()
-		actorChannel.close()
-	}
 
 	private fun deferred() = CompletableDeferred<Boolean>()
 
@@ -187,10 +115,7 @@ class CreateActionActorTest {
 	private fun sayDescription(deferredFinished: CompletableDeferred<Boolean> = deferred()) =
 		ActorMessage.Say(description, deferredFinished)
 
-	private fun back(deferredFinished: CompletableDeferred<Boolean> = deferred()) = ActorMessage.Back(deferredFinished)
 	private fun skip(deferredFinished: CompletableDeferred<Boolean> = deferred()) = ActorMessage.Skip(deferredFinished)
-	private fun cancel(deferredFinished: CompletableDeferred<Boolean> = deferred()) =
-		ActorMessage.Cancel(deferredFinished)
 
 	private fun TestCoroutineScope.actorContext(client: Client) =
 		ActorContext(chatId, userId, bot, this, client)

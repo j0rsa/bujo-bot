@@ -4,6 +4,8 @@ import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.BujoLogic.ActorCommand.*
 import com.j0rsa.bujo.telegram.BujoLogic.addValue
 import com.j0rsa.bujo.telegram.BujoLogic.handleActorMessage
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.bot
 import me.ivmg.telegram.dispatch
@@ -21,6 +23,8 @@ import okhttp3.logging.HttpLoggingInterceptor
  * @since 02.02.20
  */
 
+@ObsoleteCoroutinesApi
+@ExperimentalCoroutinesApi
 class App {
 	fun run() {
 		val bot = bot {
@@ -30,8 +34,6 @@ class App {
 				command("start") { bot, update -> BujoLogic.registerTelegramUser(bot, update) }
 				command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
 				command("skip") { _, update -> handleActorMessage(update, Skip) }
-				command("back") { _, update -> handleActorMessage(update, Back) }
-				command("cancel") { _, update -> handleActorMessage(update, Cancel) }
 				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
 				message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
 				message(Filter.Text and ShowHabitsButtonFilter.not() and CreateActionButtonFilter.not()) { _, update ->

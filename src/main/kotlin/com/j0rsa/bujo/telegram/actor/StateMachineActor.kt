@@ -1,5 +1,6 @@
 package com.j0rsa.bujo.telegram.actor
 
+import com.j0rsa.bujo.telegram.BujoTalk
 import com.j0rsa.bujo.telegram.Lines
 import com.j0rsa.bujo.telegram.actor.StateMachineActor.Companion.sendLocalizedMessage
 import com.j0rsa.bujo.telegram.api.model.User
@@ -64,8 +65,7 @@ open class StateMachineActor<T : ActorState>(
     companion object {
         fun sendLocalizedMessage(state: ActorState, line: KProperty1<Lines, String>, replyMarkup: ReplyMarkup? = null) =
             with(state) {
-                ctx.bot.sendMessage(ctx.chatId, line.get(com.j0rsa.bujo.telegram.BujoTalk.withLanguage(user.language)))
-                    .let { true }
+                ctx.bot.sendMessage(ctx.chatId, line.get(BujoTalk.withLanguage(user.language))).let { true }
             }
     }
 }

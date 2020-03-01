@@ -11,9 +11,9 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 data class AddValueState(
 	override val ctx: ActorContext,
 	val actionId: ActionId,
-	var type: ValueType,
-	var name: String,
-	var value: String
+	var type: ValueType = ValueType.values().random(),
+	var name: String = "",
+	var value: String = ""
 ) : ActorState(ctx)
 
 @ObsoleteCoroutinesApi

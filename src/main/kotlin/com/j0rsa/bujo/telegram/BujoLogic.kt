@@ -1,11 +1,9 @@
 package com.j0rsa.bujo.telegram
 
 import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
-import com.j0rsa.bujo.telegram.actor.ActorMessage
-import com.j0rsa.bujo.telegram.actor.AddValueActor
-import com.j0rsa.bujo.telegram.actor.CreateActionActor
-import com.j0rsa.bujo.telegram.actor.EditActionActor
+import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.api.TrackerClient
+import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
 import com.j0rsa.bujo.telegram.monad.ActorContext
@@ -15,12 +13,14 @@ import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
 import org.http4k.core.Status
 import java.math.BigDecimal
+import java.util.*
 
 /**
  * @author red
  * @since 09.02.20
  */
 
+@ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 	private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
@@ -165,7 +165,9 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 					val userId = BotUserId(user)
 					userActors[userId]?.close()
 					userActors[userId] = CreateActionActor.yield(
-						ActorContext(ChatId(message), userId, BujoBot(bot), this)
+						CreateActionState(
+							ActorContext(ChatId(message), userId, BujoBot(bot), this)
+						)
 					)
 				}
 			}
@@ -176,8 +178,10 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 		launch {
 			userActors[message.userId]?.close()
 			userActors[message.userId] = AddValueActor.yield(
-				message.callBackData,
-				message.toContext(this)
+				AddValueState(
+					message.toContext(this),
+					ActionId(UUID.fromString(message.callBackData))
+				)
 			)
 		}
 	}

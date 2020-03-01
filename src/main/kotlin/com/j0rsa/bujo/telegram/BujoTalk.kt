@@ -49,7 +49,9 @@ data class Lines(
     val addActionValueNameMessage: String,
     val addActionValueValueMessage: String,
     val addActionValueRegistered: String,
-    val addActionValueNotRegistered: String
+    val addActionValueNotRegistered: String,
+    val createHabitInitMessage: String,
+    val createHabitDurationMessage: String
 )
 
 enum class Language{
