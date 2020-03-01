@@ -27,9 +27,7 @@ object EditActionActor {
 		for (message in channel) {
 			receiver = when (message) {
 				is ActorMessage.Say -> receiver.say(message)
-				is ActorMessage.Back -> receiver.back(message)
 				is ActorMessage.Skip -> receiver.skip(message)
-				is ActorMessage.Cancel -> receiver.cancel(message)
 			}
 		}
 	}

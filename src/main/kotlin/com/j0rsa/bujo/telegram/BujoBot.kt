@@ -1,7 +1,5 @@
 package com.j0rsa.bujo.telegram
 
-import com.j0rsa.bujo.telegram.actor.ACTION_SUCCESS
-import com.j0rsa.bujo.telegram.actor.ADD_VALUE_ACTION_SUCCESS
 import com.j0rsa.bujo.telegram.api.model.Action
 import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.ValueType
@@ -32,10 +30,6 @@ interface Bot {
 		disableWebPagePreview: Boolean? = null,
 		replyMarkup: ReplyMarkup? = null
 	)
-
-	fun actionCreatedMessage(chatId: ChatId, actionId: ActionId)
-	fun editMessageWithValueType(chatId: ChatId, messageId: Long?, text: String)
-	fun valueAddedMessage(chatId: ChatId, actionId: ActionId)
 }
 
 class BujoBot(private val bot: Bot) : com.j0rsa.bujo.telegram.Bot {
@@ -77,18 +71,6 @@ class BujoBot(private val bot: Bot) : com.j0rsa.bujo.telegram.Bot {
 			disableWebPagePreview,
 			replyMarkup
 		)
-	}
-
-	override fun editMessageWithValueType(chatId: ChatId, messageId: Long?, text: String) {
-		bot.editMessageText(chatId.value, messageId, text = text, replyMarkup = valueTypeMarkup())
-	}
-
-	override fun valueAddedMessage(chatId: ChatId, actionId: ActionId) {
-		bot.sendMessage(chatId = chatId.value, text = ADD_VALUE_ACTION_SUCCESS, replyMarkup = createdAction(actionId))
-	}
-
-	override fun actionCreatedMessage(chatId: ChatId, actionId: ActionId) {
-		bot.sendMessage(chatId = chatId.value, text = ACTION_SUCCESS, replyMarkup = createdAction(actionId))
 	}
 }
 

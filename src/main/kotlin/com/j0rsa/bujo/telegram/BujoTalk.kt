@@ -28,7 +28,7 @@ object BujoTalk {
         } ?: Language.EN
 
     fun withLanguage(languageCode: String?): Lines =
-        translations[getLanguage(languageCode)]!!
+        translations[getLanguage(languageCode)] ?: error("With some magic language was not found")
 }
 
 data class Lines(
@@ -37,7 +37,19 @@ data class Lines(
     val showHabitsButton: String,
     val createActionButton: String,
     val welcomeBack: String,
-    val genericError: String
+    val genericError: String,
+    val actionNotRegisteredMessage: String,
+    val actionRegisteredMessage: String,
+    val stepCannotBeSkippedMessage: String,
+    val actionCreationDescriptionInput: String,
+    val actionCreationTagsInput: String,
+    val actionCreationInitMessage: String,
+    val terminatorStepMessage: String,
+    val addActionValueInitMessage: String,
+    val addActionValueNameMessage: String,
+    val addActionValueValueMessage: String,
+    val addActionValueRegistered: String,
+    val addActionValueNotRegistered: String
 )
 
 enum class Language{

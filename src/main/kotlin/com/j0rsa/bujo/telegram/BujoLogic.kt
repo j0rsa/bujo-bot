@@ -21,6 +21,7 @@ import java.math.BigDecimal
  * @since 09.02.20
  */
 
+@ExperimentalCoroutinesApi
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 	private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
 	fun showMenu(bot: Bot, update: Update) {
@@ -123,8 +124,6 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 						if (!actorChannel.isClosedForSend) {
 							when (command) {
 								is ActorCommand.Skip -> actorChannel.send(ActorMessage.Skip(deferredFinished))
-								is ActorCommand.Back -> actorChannel.send(ActorMessage.Back(deferredFinished))
-								is ActorCommand.Cancel -> actorChannel.send(ActorMessage.Cancel(deferredFinished))
 							}
 							if (deferredFinished.await()) {
 								actorChannel.close()
@@ -137,10 +136,8 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 		}
 	}
 
-	sealed class ActorCommand() {
+	sealed class ActorCommand {
 		object Skip : ActorCommand()
-		object Back : ActorCommand()
-		object Cancel : ActorCommand()
 	}
 
 	fun showHabits(bot: Bot, update: Update) {
@@ -160,6 +157,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
 	}
 
+	@ObsoleteCoroutinesApi
 	fun createAction(bot: Bot, update: Update) {
 		update.message?.let { message ->
 			message.from?.let { user: User ->
