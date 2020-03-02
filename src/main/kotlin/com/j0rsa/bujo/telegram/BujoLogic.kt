@@ -186,25 +186,25 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 		}
 	}
 
-	fun editAction(message: CallbackMessage) {
-		launch {
-			val deferredFinished = CompletableDeferred<Boolean>()
-			val actorMessage = ActorMessage.Say(message.callBackData, deferredFinished)
-			userActors[message.userId]?.close()
-			val channel = EditActionActor.yield(actorMessage, message.toContext(this))
-			if (deferredFinished.await()) {
-				channel.close()
-			} else {
-				userActors[message.userId] = channel
-			}
-		}
-	}
+//	fun editAction(message: CallbackMessage) {
+//		launch {
+//			val deferredFinished = CompletableDeferred<Boolean>()
+//			val actorMessage = ActorMessage.Say(message.callBackData, deferredFinished)
+//			userActors[message.userId]?.close()
+//			val channel = EditActionActor.yield(actorMessage, message.toContext(this))
+//			if (deferredFinished.await()) {
+//				channel.close()
+//			} else {
+//				userActors[message.userId] = channel
+//			}
+//		}
+//	}
 
 }
 
 sealed class BotMessage(
-	val bot: BujoBot,
-	val chatId: ChatId,
+	private val bot: BujoBot,
+	private val chatId: ChatId,
 	val userId: BotUserId
 ) {
 	class CallbackMessage(

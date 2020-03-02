@@ -19,13 +19,20 @@ import kotlin.reflect.KProperty1
 @ObsoleteCoroutinesApi
 open class StateMachineActor<T : ActorState>(
     private val initStep: InitStep<T>,
-    vararg steps: ActorStep<T>
+    private vararg val steps: ActorStep<T>
 ) : Actor<T> {
-    private val iterator = steps.iterator()
-
     override fun yield(state: T): SendChannel<ActorMessage> =
         with(state.ctx.scope) {
             actor {
+                val iterator = steps.iterator()
+                fun nextStep(message: ActorMessage? = null): ActorStep<T> =
+                    if (iterator.hasNext()) {
+                        message?.unComplete()
+                        iterator.next()
+                    } else {
+                        message?.complete()
+                        TerminateStep
+                    }
                 initStep(state)
                 var currentStep = nextStep()
                 for (message in channel) {
@@ -40,10 +47,14 @@ open class StateMachineActor<T : ActorState>(
                                 is OptionalStep<*> -> nextStep(message)
                                 is MandatoryStep<*> -> {
                                     sendLocalizedMessage(state, Lines::stepCannotBeSkippedMessage)
+                                    message.unComplete()
                                     currentStep
                                 }
                                 is TerminateStep -> {
                                     sendLocalizedMessage(state, Lines::terminatorStepMessage)
+                                    message.completeExceptionally(
+                                        IllegalArgumentException("Skip is not allowed for Terminate step")
+                                    )
                                     currentStep
                                 }
                             }
@@ -52,20 +63,14 @@ open class StateMachineActor<T : ActorState>(
                 }
             }
         }
-
-    private fun nextStep(message: ActorMessage? = null): ActorStep<T> =
-        if (iterator.hasNext()) {
-            message?.unComplete()
-            iterator.next()
-        } else {
-            message?.complete()
-            TerminateStep
-        }
-
     companion object {
         fun sendLocalizedMessage(state: ActorState, line: KProperty1<Lines, String>, replyMarkup: ReplyMarkup? = null) =
             with(state) {
-                ctx.bot.sendMessage(ctx.chatId, line.get(BujoTalk.withLanguage(user.language))).let { true }
+                ctx.bot.sendMessage(
+                    chatId = ctx.chatId,
+                    text = line.get(BujoTalk.withLanguage(user.language)),
+                    replyMarkup = replyMarkup
+                    ).let { true }
             }
     }
 }

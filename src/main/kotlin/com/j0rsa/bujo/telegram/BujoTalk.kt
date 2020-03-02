@@ -24,7 +24,7 @@ object BujoTalk {
 
     private fun getLanguage(languageCode: String?): Language =
         languageCode?.let {
-            Language.valueOf(it.toUpperCase())
+            if (it.isNotBlank()) Language.valueOf(it.toUpperCase()) else Language.EN
         } ?: Language.EN
 
     fun withLanguage(languageCode: String?): Lines =

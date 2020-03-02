@@ -83,8 +83,8 @@ class App {
 	private fun editActionCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
 		val userId = BotUserId(callbackQuery.from)
 		val data = parse(callbackQuery.data, CALLBACK_VIEW_ACTION)
-
-		BujoLogic.editAction(CallbackMessage(BujoBot(bot), userId, ChatId(message), data))
+		TODO()
+//		BujoLogic.editAction(CallbackMessage(BujoBot(bot), userId, ChatId(message), data))
 	}
 
 	private fun deleteMessage(bot: Bot, message: Message) {

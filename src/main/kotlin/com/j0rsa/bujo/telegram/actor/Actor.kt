@@ -13,8 +13,8 @@ interface Actor<T: ActorState> {
 }
 
 sealed class ActorMessage(private val deferred: CompletableDeferred<Boolean>) {
-	class Say(val text: String, d: CompletableDeferred<Boolean> = CompletableDeferred()) : ActorMessage(d)
-	class Skip(d: CompletableDeferred<Boolean> = CompletableDeferred()) : ActorMessage(d)
+	data class Say(val text: String, val d: CompletableDeferred<Boolean> = CompletableDeferred()) : ActorMessage(d)
+	data class Skip(val d: CompletableDeferred<Boolean> = CompletableDeferred()) : ActorMessage(d)
 
 	fun complete() = deferred.complete(true)
 	fun completeExceptionally(exception: Throwable) = deferred.completeExceptionally(exception)
