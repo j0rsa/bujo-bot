@@ -1,5 +1,4 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version Versions.kotlin
@@ -44,9 +43,11 @@ dependencies {
 tasks {
     compileKotlin {
         kotlinOptions.jvmTarget = App.compileVersion
+        kotlinOptions.freeCompilerArgs = listOf("-XXLanguage:+InlineClasses", "-Xopt-in=kotlin.RequiresOptIn")
     }
     compileTestKotlin {
         kotlinOptions.jvmTarget = App.compileVersion
+        kotlinOptions.freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
     }
 
     named<ShadowJar>("shadowJar") {
@@ -72,8 +73,4 @@ docker {
     @Suppress("UnstableApiUsage")
     buildArgs(mapOf("JAR_FILE" to shadowJar.archiveFileName.get()))
     files(shadowJar.outputs)
-}
-val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions {
-    freeCompilerArgs = listOf("-XXLanguage:+InlineClasses", "-Xopt-in=kotlin.RequiresOptIn")
 }

@@ -4,7 +4,6 @@ import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.BujoLogic.ActorCommand.Skip
 import com.j0rsa.bujo.telegram.BujoLogic.addValue
 import com.j0rsa.bujo.telegram.BujoLogic.handleActorMessage
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.bot
 import me.ivmg.telegram.dispatch
@@ -22,7 +21,6 @@ import okhttp3.logging.HttpLoggingInterceptor
  * @since 02.02.20
  */
 
-@ExperimentalCoroutinesApi
 class App {
 	fun run() {
 		val bot = bot {

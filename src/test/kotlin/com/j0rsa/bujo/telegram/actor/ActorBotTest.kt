@@ -5,8 +5,6 @@ import com.j0rsa.bujo.telegram.api.model.User
 import com.j0rsa.bujo.telegram.api.model.UserId
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import com.j0rsa.bujo.telegram.monad.Client
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.doAnswer
 import com.nhaarman.mockitokotlin2.mock
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,7 +16,6 @@ import kotlin.reflect.KProperty1
  * @since 02.03.20
  */
 
-@ExperimentalCoroutinesApi
 open class ActorBotTest {
     protected val chatId = ChatId(10L)
     protected val userId = BotUserId(1L)
@@ -27,6 +24,7 @@ open class ActorBotTest {
 
     fun deferred() = CompletableDeferred<Boolean>()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun TestCoroutineScope.actorContext(client: Client) =
         ActorContext(chatId, userId, bot, this, client)
 

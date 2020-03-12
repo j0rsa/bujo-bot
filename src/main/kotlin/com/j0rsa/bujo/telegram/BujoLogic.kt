@@ -20,7 +20,7 @@ import java.util.*
  * @since 09.02.20
  */
 
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 	private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
 	fun showMenu(bot: Bot, update: Update) {
