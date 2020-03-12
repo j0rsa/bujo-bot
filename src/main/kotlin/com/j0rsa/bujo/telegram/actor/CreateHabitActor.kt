@@ -2,7 +2,6 @@ package com.j0rsa.bujo.telegram.actor
 
 import com.j0rsa.bujo.telegram.Lines
 import com.j0rsa.bujo.telegram.monad.ActorContext
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 
 /**
  * @author red
@@ -15,7 +14,6 @@ data class CreateHabitState(
 	var duration: String = ""
 ) : ActorState(ctx)
 
-@ObsoleteCoroutinesApi
 object HabitActor : StateMachineActor<CreateHabitState>(
 	initStep {
 		sendLocalizedMessage(state, Lines::createHabitInitMessage)

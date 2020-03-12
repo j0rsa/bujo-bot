@@ -20,7 +20,6 @@ import java.util.*
  * @since 09.02.20
  */
 
-@ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 	private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
@@ -157,7 +156,6 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
 	}
 
-	@ObsoleteCoroutinesApi
 	fun createAction(bot: Bot, update: Update) {
 		update.message?.let { message ->
 			message.from?.let { user: User ->

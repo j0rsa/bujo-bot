@@ -16,11 +16,11 @@ import kotlin.reflect.KProperty1
  * @since 01.03.20
  */
 
-@ObsoleteCoroutinesApi
 open class StateMachineActor<T : ActorState>(
     private val initStep: InitStep<T>,
     private vararg val steps: ActorStep<T>
 ) : Actor<T> {
+    @OptIn(ObsoleteCoroutinesApi::class)
     override fun yield(state: T): SendChannel<ActorMessage> =
         with(state.ctx.scope) {
             actor {
@@ -89,7 +89,6 @@ typealias InitStep<T> = MandatoryStep<T>
 class OptionalStep<T : ActorState>(body: StepDefinition<T>.() -> Boolean) : ActorStep<T>(body)
 class MandatoryStep<T : ActorState>(body: StepDefinition<T>.() -> Boolean) : ActorStep<T>(body)
 
-@ObsoleteCoroutinesApi
 object TerminateStep : ActorStep<ActorState>({
     sendLocalizedMessage(state, Lines::terminatorStepMessage)
     false

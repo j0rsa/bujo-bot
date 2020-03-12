@@ -7,7 +7,6 @@ import com.j0rsa.bujo.telegram.api.model.ValueType
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import com.j0rsa.bujo.telegram.valueMarkup
 import com.j0rsa.bujo.telegram.valueTypeMarkup
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 
 data class AddValueState(
 	override val ctx: ActorContext,
@@ -17,7 +16,6 @@ data class AddValueState(
 	var value: String = ""
 ) : ActorState(ctx)
 
-@ObsoleteCoroutinesApi
 object AddValueActor : StateMachineActor<AddValueState>(
 	initStep {
 		sendLocalizedMessage(state, Lines::addActionValueInitMessage, valueTypeMarkup())

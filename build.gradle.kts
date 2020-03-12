@@ -1,4 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm") version Versions.kotlin
     kotlin("kapt") version Versions.kapt
@@ -49,6 +51,7 @@ tasks {
 
     named<ShadowJar>("shadowJar") {
         mergeServiceFiles()
+        @Suppress("UnstableApiUsage")
         manifest {
             attributes(mapOf("Main-Class" to "com.j0rsa.bujo.telegram.App"))
         }
@@ -66,6 +69,11 @@ docker {
     name = taggedDockerName
     setDockerfile(baseDockerFile)
     tag("DockerTag", "$baseDockerName:latest")
+    @Suppress("UnstableApiUsage")
     buildArgs(mapOf("JAR_FILE" to shadowJar.archiveFileName.get()))
     files(shadowJar.outputs)
+}
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions {
+    freeCompilerArgs = listOf("-XXLanguage:+InlineClasses", "-Xopt-in=kotlin.RequiresOptIn")
 }

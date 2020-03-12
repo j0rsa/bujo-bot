@@ -15,7 +15,7 @@ object Versions {
     const val telegramApi = "4.4.0"
     const val http4k = "3.231.0"
     const val config4k = "0.4.2"
-    const val coroutines = "1.3.3"
+    const val coroutines = "1.3.4"
     const val slf4j = "1.7.25"
     const val logback = "1.2.3"
     const val arrow = "0.10.4"

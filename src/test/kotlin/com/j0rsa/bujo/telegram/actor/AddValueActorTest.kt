@@ -4,9 +4,10 @@ import arrow.core.Either
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import com.j0rsa.bujo.telegram.Bot
 import com.j0rsa.bujo.telegram.Lines
-import com.j0rsa.bujo.telegram.api.model.*
+import com.j0rsa.bujo.telegram.api.model.ActionId
+import com.j0rsa.bujo.telegram.api.model.Value
+import com.j0rsa.bujo.telegram.api.model.ValueType
 import com.j0rsa.bujo.telegram.monad.Client
 import com.j0rsa.bujo.telegram.valueMarkup
 import com.j0rsa.bujo.telegram.valueTypeMarkup
@@ -15,11 +16,9 @@ import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
 
-@ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi
 internal class AddValueActorTest : ActorBotTest() {
 	private val actionId = ActionId.randomValue()

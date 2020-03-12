@@ -5,7 +5,6 @@ import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.createdAction
 import com.j0rsa.bujo.telegram.monad.ActorContext
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 
 /**
  * @author red
@@ -17,7 +16,6 @@ data class CreateActionState(
 	var tags: List<TagRequest> = emptyList()
 ) : ActorState(ctx)
 
-@ObsoleteCoroutinesApi
 object CreateActionActor : StateMachineActor<CreateActionState>(
 	initStep {
 		sendLocalizedMessage(state, Lines::actionCreationInitMessage)
