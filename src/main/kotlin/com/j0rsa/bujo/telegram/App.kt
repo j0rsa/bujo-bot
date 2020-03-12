@@ -12,7 +12,6 @@ import me.ivmg.telegram.dispatcher.command
 import me.ivmg.telegram.dispatcher.message
 import me.ivmg.telegram.entities.CallbackQuery
 import me.ivmg.telegram.entities.Message
-import me.ivmg.telegram.entities.User
 import me.ivmg.telegram.extensions.filters.Filter
 import okhttp3.logging.HttpLoggingInterceptor
 
@@ -32,7 +31,7 @@ class App {
 				command("skip") { _, update -> handleActorMessage(update, Skip) }
 				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
 				message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
-				message(Filter.Text and ShowHabitsButtonFilter.not() and CreateActionButtonFilter.not()) { _, update ->
+				message(Filter.Text and notTextButton()) { _, update ->
 					val message = update.message ?: return@message
 					val userId = BotUserId(message.from ?: return@message)
 					val text = message.text ?: return@message
@@ -51,12 +50,12 @@ class App {
 					deleteMessage(bot, message)
 					actorsCallback(callbackQuery, message)
 				}
-				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
-					val callbackQuery = update.callbackQuery ?: return@callbackQuery
-					val message = callbackQuery.message ?: return@callbackQuery
-					deleteMessage(bot, message)
-					editActionCallback(callbackQuery, message, bot)
-				}
+//				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
+//					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+//					val message = callbackQuery.message ?: return@callbackQuery
+//					deleteMessage(bot, message)
+//					editActionCallback(callbackQuery, message, bot)
+//				}
 			}
 		}
 		bot.startPolling()
@@ -76,25 +75,15 @@ class App {
 		handleActorMessage(HandleActorMessage(userId, ChatId(message), data))
 	}
 
-	private fun editActionCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
-		val userId = BotUserId(callbackQuery.from)
-		val data = parse(callbackQuery.data, CALLBACK_VIEW_ACTION)
-		TODO()
+//	private fun editActionCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
+//		val userId = BotUserId(callbackQuery.from)
+//		val data = parse(callbackQuery.data, CALLBACK_VIEW_ACTION)
+//
 //		BujoLogic.editAction(CallbackMessage(BujoBot(bot), userId, ChatId(message), data))
-	}
+//	}
 
 	private fun deleteMessage(bot: Bot, message: Message) {
 		bot.deleteMessage(message.chat.id, message.messageId)
-	}
-
-	object ShowHabitsButtonFilter : Filter {
-		override fun Message.predicate(): Boolean =
-			text == BujoTalk.withLanguage(from?.languageCode).showHabitsButton
-	}
-
-	object CreateActionButtonFilter : Filter {
-		override fun Message.predicate(): Boolean =
-			text == BujoTalk.withLanguage(from?.languageCode).createActionButton
 	}
 
 	companion object {
@@ -102,15 +91,23 @@ class App {
 		fun main(args: Array<String>) {
 			App().run()
 		}
+
+		private fun notTextButton() =
+			listOf(
+				ShowHabitsButtonFilter,
+				CreateActionButtonFilter
+			).fold(Filter.All as Filter, { acc, filter -> acc and filter.not() })
+
+		object ShowHabitsButtonFilter : Filter {
+			override fun Message.predicate(): Boolean =
+				text == BujoTalk.withLanguage(from?.languageCode).showHabitsButton
+		}
+
+		object CreateActionButtonFilter : Filter {
+			override fun Message.predicate(): Boolean =
+				text == BujoTalk.withLanguage(from?.languageCode).createActionButton
+		}
+
+		private fun parse(text: String, template: String): String = text.substringAfter("$template:")
 	}
 }
-
-inline class BotUserId(val value: Long) {
-	constructor(user: User) : this(user.id)
-}
-
-inline class ChatId(val value: Long) {
-	constructor(message: Message) : this(message.chat.id)
-}
-
-fun parse(text: String, template: String): String = text.substringAfter("$template:")
