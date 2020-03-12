@@ -153,7 +153,6 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 				)
 			}
 		}
-
 	}
 
 	fun createAction(bot: Bot, update: Update) {
