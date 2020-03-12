@@ -2,13 +2,22 @@ package com.j0rsa.bujo.telegram.api.model
 
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.time.Period
 import java.util.*
 
 /**
  * @author red
  * @since 08.02.20
  */
+
+data class HabitRequest(
+    val name: String,
+    val tags: List<TagRequest>,
+    val numberOfRepetitions: Int,
+    val period: Period,
+    val quote: String?,
+    val bad: Boolean?,
+    val startFrom: LocalDateTime?
+)
 
 data class Habit(
     val name: String,
@@ -20,6 +29,10 @@ data class Habit(
     val startFrom: LocalDateTime?,
     val id: HabitId? = null
 )
+
+enum class Period {
+    WEEKLY, DAILY
+}
 
 data class HabitsInfo(
     val habit: Habit,

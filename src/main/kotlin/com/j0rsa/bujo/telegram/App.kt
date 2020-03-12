@@ -31,6 +31,7 @@ class App {
 				command("skip") { _, update -> handleActorMessage(update, Skip) }
 				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
 				message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
+				message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
 				message(Filter.Text and notTextButton()) { _, update ->
 					val message = update.message ?: return@message
 					val userId = BotUserId(message.from ?: return@message)
@@ -49,6 +50,12 @@ class App {
 					val message = callbackQuery.message ?: return@callbackQuery
 					deleteMessage(bot, message)
 					actorsCallback(callbackQuery, message)
+				}
+				callbackQuery(CALLBACK_SETTINGS_CHECK_BACKEND) { bot, update ->
+					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+					val message = callbackQuery.message ?: return@callbackQuery
+					deleteMessage(bot, message)
+					BujoLogic.checkBackendStatus(bot, message)
 				}
 //				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
 //					val callbackQuery = update.callbackQuery ?: return@callbackQuery
@@ -95,7 +102,8 @@ class App {
 		private fun notTextButton() =
 			listOf(
 				ShowHabitsButtonFilter,
-				CreateActionButtonFilter
+				CreateActionButtonFilter,
+				SettingsButtonFilter
 			).fold(Filter.All as Filter, { acc, filter -> acc and filter.not() })
 
 		object ShowHabitsButtonFilter : Filter {
@@ -106,6 +114,11 @@ class App {
 		object CreateActionButtonFilter : Filter {
 			override fun Message.predicate(): Boolean =
 				text == BujoTalk.withLanguage(from?.languageCode).createActionButton
+		}
+
+		object SettingsButtonFilter : Filter {
+			override fun Message.predicate(): Boolean =
+				text == BujoTalk.withLanguage(from?.languageCode).settingsButton
 		}
 
 		private fun parse(text: String, template: String): String = text.substringAfter("$template:")

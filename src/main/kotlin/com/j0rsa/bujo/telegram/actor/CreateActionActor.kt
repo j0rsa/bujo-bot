@@ -1,6 +1,10 @@
 package com.j0rsa.bujo.telegram.actor
 
 import com.j0rsa.bujo.telegram.Lines
+import com.j0rsa.bujo.telegram.actor.common.ActorState
+import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
+import com.j0rsa.bujo.telegram.actor.common.initStep
+import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.createdAction

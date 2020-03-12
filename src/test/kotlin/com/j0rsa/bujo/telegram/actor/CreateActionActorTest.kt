@@ -5,6 +5,7 @@ import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import com.j0rsa.bujo.telegram.Lines
+import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest

@@ -1,6 +1,7 @@
 package com.j0rsa.bujo.telegram.actor
 
 import com.j0rsa.bujo.telegram.Lines
+import com.j0rsa.bujo.telegram.actor.common.*
 import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.Value
 import com.j0rsa.bujo.telegram.api.model.ValueType
@@ -27,14 +28,14 @@ object AddValueActor : StateMachineActor<AddValueState>(
 			return@mandatoryStep false
 		}
 		state.name = state.type.name
-		sendLocalizedMessage(state, Lines::addActionValueNameMessage)
+		sendLocalizedMessage(state, listOf(Lines::addActionValueNameMessage, Lines::orTapSkipMessage))
 	},
-	optionalStep {
-		//execute
+	optionalStep({
 		state.name = message.text
-		//init
-		sendLocalizedMessage(state, Lines::addActionValueValueMessage, valueMarkup(state.type))
-	},
+		true
+	}, {
+		sendLocalizedMessage(this, Lines::addActionValueValueMessage, valueMarkup(type))
+	}),
 	mandatoryStep {
 		state.value = message.text
 		with(state) {

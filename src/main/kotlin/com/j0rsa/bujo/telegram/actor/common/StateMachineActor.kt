@@ -1,8 +1,8 @@
-package com.j0rsa.bujo.telegram.actor
+package com.j0rsa.bujo.telegram.actor.common
 
 import com.j0rsa.bujo.telegram.BujoTalk
 import com.j0rsa.bujo.telegram.Lines
-import com.j0rsa.bujo.telegram.actor.StateMachineActor.Companion.sendLocalizedMessage
+import com.j0rsa.bujo.telegram.actor.common.StateMachineActor.Companion.sendLocalizedMessage
 import com.j0rsa.bujo.telegram.api.model.User
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -44,7 +44,7 @@ open class StateMachineActor<T : ActorState>(
                         }
                         is ActorMessage.Skip -> {
                             when (currentStep) {
-                                is OptionalStep<*> -> nextStep(message)
+                                is OptionalStep<*> -> currentStep.skip(state).run { nextStep(message) }
                                 is MandatoryStep<*> -> {
                                     sendLocalizedMessage(state, Lines::stepCannotBeSkippedMessage)
                                     message.unComplete()
@@ -70,7 +70,20 @@ open class StateMachineActor<T : ActorState>(
                     chatId = ctx.chatId,
                     text = line.get(BujoTalk.withLanguage(user.language)),
                     replyMarkup = replyMarkup
-                    ).let { true }
+                ).let { true }
+            }
+
+        fun sendLocalizedMessage(
+            state: ActorState,
+            lines: List<KProperty1<Lines, String>>,
+            replyMarkup: ReplyMarkup? = null
+        ) =
+            with(state) {
+                ctx.bot.sendMessage(
+                    chatId = ctx.chatId,
+                    text = lines.joinToString(separator = "\n") { it.get(BujoTalk.withLanguage(user.language)) },
+                    replyMarkup = replyMarkup
+                ).let { true }
             }
     }
 }
@@ -80,14 +93,24 @@ abstract class ActorState(
     val user: User = ctx.client.getUser(ctx.userId)
 )
 
-sealed class ActorStep<in T : ActorState>(val body: StepDefinition<T>.() -> Boolean) {
+sealed class ActorStep<in T : ActorState>(
+    private val action: StepDefinition<T>.() -> Boolean,
+    private val caption: T.() -> Boolean = { true }
+) {
     open operator fun invoke(state: T, message: ActorMessage.Say = ActorMessage.Say("")): Boolean =
-        body(StepDefinition(state, message))
+        with(StepDefinition(state, message)) {
+            action(this).also { caption(state) }
+        }
+
+    fun skip(state: T) = caption(state)
 }
 
 typealias InitStep<T> = MandatoryStep<T>
-class OptionalStep<T : ActorState>(body: StepDefinition<T>.() -> Boolean) : ActorStep<T>(body)
-class MandatoryStep<T : ActorState>(body: StepDefinition<T>.() -> Boolean) : ActorStep<T>(body)
+
+class OptionalStep<T : ActorState>(action: StepDefinition<T>.() -> Boolean, caption: T.() -> Boolean) :
+    ActorStep<T>(action, caption)
+
+class MandatoryStep<T : ActorState>(action: StepDefinition<T>.() -> Boolean) : ActorStep<T>(action)
 
 object TerminateStep : ActorStep<ActorState>({
     sendLocalizedMessage(state, Lines::terminatorStepMessage)
@@ -95,8 +118,13 @@ object TerminateStep : ActorStep<ActorState>({
 })
 
 
-fun <T : ActorState> optionalStep(body: StepDefinition<T>.() -> Boolean) = OptionalStep(body)
-fun <T : ActorState> initStep(body: StepDefinition<T>.() -> Boolean) = MandatoryStep(body)
-fun <T : ActorState> mandatoryStep(body: StepDefinition<T>.() -> Boolean) = MandatoryStep(body)
+fun <T : ActorState> optionalStep(action: StepDefinition<T>.() -> Boolean, caption: T.() -> Boolean) =
+    OptionalStep(action, caption)
 
-data class StepDefinition<out T: ActorState>(val state: T, val message: ActorMessage.Say)
+fun <T : ActorState> initStep(action: StepDefinition<T>.() -> Boolean) =
+    MandatoryStep(action)
+
+fun <T : ActorState> mandatoryStep(action: StepDefinition<T>.() -> Boolean) =
+    MandatoryStep(action)
+
+data class StepDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say)

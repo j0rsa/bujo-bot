@@ -1,4 +1,4 @@
-package com.j0rsa.bujo.telegram.actor
+package com.j0rsa.bujo.telegram.actor.common
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.SendChannel

@@ -1,6 +1,7 @@
 package com.j0rsa.bujo.telegram.actor
 
 import com.j0rsa.bujo.telegram.*
+import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.model.User
 import com.j0rsa.bujo.telegram.api.model.UserId
 import com.j0rsa.bujo.telegram.monad.ActorContext

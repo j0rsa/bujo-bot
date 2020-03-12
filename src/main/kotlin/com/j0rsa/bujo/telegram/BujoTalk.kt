@@ -36,6 +36,9 @@ data class Lines(
     val showHabitsMessage: String,
     val showHabitsButton: String,
     val createActionButton: String,
+    val settingsButton: String,
+    val settingsMessage: String,
+    val checkBackendButton: String,
     val welcomeBack: String,
     val genericError: String,
     val actionNotRegisteredMessage: String,
@@ -51,7 +54,15 @@ data class Lines(
     val addActionValueRegistered: String,
     val addActionValueNotRegistered: String,
     val createHabitInitMessage: String,
-    val createHabitDurationMessage: String
+    val createHabitTagsMessage: String,
+    val createHabitNumberOfRepetitionsMessage: String,
+    val createHabitPeriodMessage: String,
+    val periodWeekly: String,
+    val periodDaily: String,
+    val statusMessage: String,
+    val badInput: String,
+    val orTapSkipMessage: String,
+    val createHabitQuoteMessage: String
 )
 
 enum class Language{

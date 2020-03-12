@@ -1,7 +1,11 @@
 package com.j0rsa.bujo.telegram
 
 import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
-import com.j0rsa.bujo.telegram.actor.*
+import com.j0rsa.bujo.telegram.actor.AddValueActor
+import com.j0rsa.bujo.telegram.actor.AddValueState
+import com.j0rsa.bujo.telegram.actor.CreateActionActor
+import com.j0rsa.bujo.telegram.actor.CreateActionState
+import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
@@ -22,29 +26,27 @@ import java.util.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
-	private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
-	fun showMenu(bot: Bot, update: Update) {
-		update.message?.let { message ->
-			val text = if (TrackerClient.health()) {
-				"😀"
-			} else {
-				"\uD83D\uDE30"
-			}
-			bot.sendMessage(
-				message.chat.id,
-				text
-			)
-		}
-	}
+    private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
+    fun checkBackendStatus(bot: Bot, message: Message) {
+        val text = if (TrackerClient.health()) {
+            "😀"
+        } else {
+            "\uD83D\uDE30"
+        }
+        bot.sendMessage(
+            message.chat.id,
+            "${BujoTalk.withLanguage(message.from?.languageCode).statusMessage} $text"
+        )
+    }
 
-	fun selectLanguage(bot: Bot, update: Update) {
-		update.message?.let { message ->
-			bot.sendMessage(
-				message.chat.id,
-				text = "Language",
-				replyMarkup = InlineKeyboardMarkup(
-					listOf(
-						BujoTalk.getSupportedLanguageCodesWithFlags().map {
+    fun selectLanguage(bot: Bot, update: Update) {
+        update.message?.let { message ->
+            bot.sendMessage(
+                message.chat.id,
+                text = "Language",
+                replyMarkup = InlineKeyboardMarkup(
+                    listOf(
+                        BujoTalk.getSupportedLanguageCodesWithFlags().map {
 							InlineKeyboardButton(it.second, callbackData = it.first.name)
 						}
 					)
@@ -75,24 +77,25 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 					)
 				)
 				val text = when (status) {
-					Status.CREATED -> {
-						BujoTalk.withLanguage(it.languageCode).welcome
-					}
-					Status.OK -> {
-						BujoTalk.withLanguage(it.languageCode).welcomeBack
-					}
-					else -> {
-						BujoTalk.withLanguage(it.languageCode).genericError
-					}
-				}
+                    Status.CREATED -> BujoTalk.withLanguage(it.languageCode).welcome
+                    Status.OK -> BujoTalk.withLanguage(it.languageCode).welcomeBack
+                    else -> BujoTalk.withLanguage(it.languageCode).genericError
+                }
 				bot.sendMessage(
 					message.chat.id,
 					text,
 					replyMarkup = KeyboardReplyMarkup(
-						KeyboardButton(BujoTalk.withLanguage(message.from?.languageCode).showHabitsButton),
-						KeyboardButton(BujoTalk.withLanguage(message.from?.languageCode).createActionButton),
-						resizeKeyboard = true
-					)
+                        listOf(
+                            listOf(
+                                KeyboardButton(BujoTalk.withLanguage(message.from?.languageCode).showHabitsButton),
+                                KeyboardButton(BujoTalk.withLanguage(message.from?.languageCode).createActionButton)
+                            ),
+                            listOf(
+                                KeyboardButton(BujoTalk.withLanguage(message.from?.languageCode).settingsButton)
+                            )
+                        ),
+                        resizeKeyboard = true
+                    )
 				)
 			}
 		}
@@ -173,15 +176,35 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
 	fun addValue(message: CallbackMessage) {
 		launch {
-			userActors[message.userId]?.close()
-			userActors[message.userId] = AddValueActor.yield(
-				AddValueState(
-					message.toContext(this),
-					ActionId(UUID.fromString(message.callBackData))
-				)
-			)
-		}
-	}
+            userActors[message.userId]?.close()
+            userActors[message.userId] = AddValueActor.yield(
+                AddValueState(
+                    message.toContext(this),
+                    ActionId(UUID.fromString(message.callBackData))
+                )
+            )
+        }
+    }
+
+    fun showSettings(bot: Bot, update: Update) {
+        update.message?.let {
+            val withLanguage = BujoTalk.withLanguage(it.from?.languageCode)
+            bot.sendMessage(
+                ChatId(it).value,
+                withLanguage.settingsMessage,
+                replyMarkup = InlineKeyboardMarkup(
+                    listOf(
+                        listOf(
+                            InlineKeyboardButton(
+                                withLanguage.checkBackendButton,
+                                callbackData = CALLBACK_SETTINGS_CHECK_BACKEND
+                            )
+                        )
+                    )
+                )
+            )
+        }
+    }
 
 //	fun editAction(message: CallbackMessage) {
 //		launch {

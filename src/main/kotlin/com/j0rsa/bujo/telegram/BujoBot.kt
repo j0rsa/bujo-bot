@@ -2,6 +2,7 @@ package com.j0rsa.bujo.telegram
 
 import com.j0rsa.bujo.telegram.api.model.Action
 import com.j0rsa.bujo.telegram.api.model.ActionId
+import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.ValueType
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.InlineKeyboardButton
@@ -118,6 +119,17 @@ private fun moodMarkup(): InlineKeyboardMarkup = InlineKeyboardMarkup(
 	)
 )
 
+fun periodMarkup(language: String): InlineKeyboardMarkup = with(BujoTalk.withLanguage(language)) {
+	InlineKeyboardMarkup(
+		listOf(
+			listOf(
+				InlineKeyboardButton(text = periodDaily, callbackData = "$CALLBACK_ACTOR_TEMPLATE:${Period.DAILY}"),
+				InlineKeyboardButton(text = periodWeekly, callbackData = "$CALLBACK_ACTOR_TEMPLATE:${Period.WEEKLY}")
+			)
+		)
+	)
+}
+
 
 private fun nowMarkup(): InlineKeyboardMarkup = InlineKeyboardMarkup(
 	listOf(
@@ -130,7 +142,4 @@ private fun nowMarkup(): InlineKeyboardMarkup = InlineKeyboardMarkup(
 	)
 )
 
-const val CALLBACK_ACTOR_TEMPLATE = "actor"
-const val CALLBACK_ADD_VALUE = "addActionValue"
-const val CALLBACK_VIEW_ACTION = "viewAction"
 const val TODO_TEMPLATE = "todo"

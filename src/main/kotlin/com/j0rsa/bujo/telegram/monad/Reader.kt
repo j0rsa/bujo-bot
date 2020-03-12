@@ -3,12 +3,10 @@ package com.j0rsa.bujo.telegram.monad
 import arrow.core.Either
 import com.j0rsa.bujo.telegram.BotError
 import com.j0rsa.bujo.telegram.BotUserId
-import com.j0rsa.bujo.telegram.BujoBot
 import com.j0rsa.bujo.telegram.ChatId
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.*
 import kotlinx.coroutines.CoroutineScope
-import me.ivmg.telegram.Bot
 import org.http4k.core.Status
 
 /**
@@ -49,4 +47,5 @@ interface Client {
 	fun createAction(userId: UserId, actionRequest: ActionRequest): Either<BotError, ActionId>
 	fun addValue(userId: UserId, actionId: ActionId, value: Value): Either<BotError, ActionId>
 	fun getAction(userId: UserId, actionId: ActionId): Either<BotError, Action>
+	fun createHabit(userId: UserId, habit: HabitRequest): Either<BotError, Habit>
 }

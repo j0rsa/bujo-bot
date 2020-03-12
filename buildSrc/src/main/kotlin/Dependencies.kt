@@ -10,7 +10,7 @@ object Plugins {
 }
 
 object Versions {
-    const val kotlin = "1.3.61"
+    const val kotlin = "1.3.70"
     const val kapt = "1.3.61"
     const val telegramApi = "4.4.0"
     const val http4k = "3.231.0"
