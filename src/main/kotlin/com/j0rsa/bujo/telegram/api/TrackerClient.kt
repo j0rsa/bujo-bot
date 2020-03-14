@@ -7,6 +7,7 @@ import com.j0rsa.bujo.telegram.*
 import com.j0rsa.bujo.telegram.api.RequestLens.actionIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionRequestLens
+import com.j0rsa.bujo.telegram.api.RequestLens.habitIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitRequestLens
 import com.j0rsa.bujo.telegram.api.RequestLens.multipleHabitsLens
@@ -68,10 +69,10 @@ object TrackerClient : Client {
 	override fun getHabit(userId: UserId, habitId: HabitId): Habit =
 		habitLens(client("/habits/$habitId".get().with(userId)))
 
-	override fun createHabit(userId: UserId, habit: HabitRequest): Either<BotError, Habit> =
+	override fun createHabit(userId: UserId, habit: HabitRequest): Either<BotError, HabitId> =
 		with(client(habitRequestLens(habit, "/habits".post().with(userId)))) {
 			when (status) {
-				Status.OK, Status.CREATED -> habitLens(this).right()
+				Status.OK, Status.CREATED -> habitIdLens(this).right()
 				else -> NotCreated.left()
 			}
 		}

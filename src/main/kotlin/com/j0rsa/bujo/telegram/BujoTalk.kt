@@ -57,12 +57,16 @@ data class Lines(
     val createHabitTagsMessage: String,
     val createHabitNumberOfRepetitionsMessage: String,
     val createHabitPeriodMessage: String,
-    val periodWeekly: String,
-    val periodDaily: String,
+    val periodWeeklyButton: String,
+    val periodDailyButton: String,
     val statusMessage: String,
-    val badInput: String,
+    val badInputMessage: String,
     val orTapSkipMessage: String,
-    val createHabitQuoteMessage: String
+    val createHabitQuoteMessage: String,
+    val habitRegisteredMessage: String,
+    val habitNotRegisteredMessage: String,
+    val viewHabitButton: String,
+    val viewActionButton: String
 )
 
 enum class Language{

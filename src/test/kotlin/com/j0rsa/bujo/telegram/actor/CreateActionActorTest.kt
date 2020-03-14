@@ -4,12 +4,12 @@ import arrow.core.Either
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
+import com.j0rsa.bujo.telegram.BujoMarkup.createdActionMarkup
 import com.j0rsa.bujo.telegram.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
-import com.j0rsa.bujo.telegram.createdAction
 import com.j0rsa.bujo.telegram.monad.Client
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
@@ -45,7 +45,7 @@ class CreateActionActorTest : ActorBotTest() {
 		verify(bot).sendMessage(
 			chatId,
 			getLocalizedMessage(Lines::actionRegisteredMessage),
-			replyMarkup = createdAction(actionId)
+			replyMarkup = createdActionMarkup("en", actionId)
 		)
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()

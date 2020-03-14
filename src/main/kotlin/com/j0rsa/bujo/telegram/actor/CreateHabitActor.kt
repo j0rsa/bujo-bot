@@ -1,14 +1,13 @@
 package com.j0rsa.bujo.telegram.actor
 
+import com.j0rsa.bujo.telegram.BujoMarkup.habitCreatedMarkup
+import com.j0rsa.bujo.telegram.BujoMarkup.periodMarkup
 import com.j0rsa.bujo.telegram.Lines
-import com.j0rsa.bujo.telegram.actor.common.ActorState
-import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
-import com.j0rsa.bujo.telegram.actor.common.initStep
-import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
+import com.j0rsa.bujo.telegram.actor.common.*
+import com.j0rsa.bujo.telegram.api.model.HabitRequest
 import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.monad.ActorContext
-import com.j0rsa.bujo.telegram.periodMarkup
 import java.time.LocalDateTime
 
 /**
@@ -45,7 +44,7 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 				!sendLocalizedMessage(
 					state,
 					listOf(
-						Lines::badInput,
+						Lines::badInputMessage,
 						Lines::createHabitPeriodMessage
 					),
 					periodMarkup(state.user.language)
@@ -65,11 +64,28 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 			!sendLocalizedMessage(
 				state,
 				listOf(
-					Lines::badInput,
+					Lines::badInputMessage,
 					Lines::createHabitNumberOfRepetitionsMessage
 				)
 			)
 		}
-	}
-
+	},
+	optionalStep({
+		state.quote = message.text.trim()
+		true
+	}, {
+		ctx.client.createHabit(
+			user.id, HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom)
+		).fold(
+			{
+				!sendLocalizedMessage(this, Lines::actionNotRegisteredMessage)
+			},
+			{ habitId ->
+				sendLocalizedMessage(
+					this,
+					Lines::actionRegisteredMessage,
+					habitCreatedMarkup(user.language, habitId)
+				)
+			})
+	})
 )

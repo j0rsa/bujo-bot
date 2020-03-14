@@ -12,6 +12,7 @@ import org.http4k.format.Gson.auto
 object RequestLens {
     val habitInfoLens = Body.auto<HabitInfoView>().toLens()
     val habitLens = Body.auto<Habit>().toLens()
+    val habitIdLens = Body.auto<HabitId>().toLens()
     val habitRequestLens = Body.auto<HabitRequest>().toLens()
     val multipleHabitsLens = Body.auto<List<HabitsInfo>>().toLens()
     val tagLens = Body.auto<Tag>().toLens()
