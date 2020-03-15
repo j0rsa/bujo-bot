@@ -2,6 +2,7 @@ package com.j0rsa.bujo.telegram.actor
 
 import com.j0rsa.bujo.telegram.BujoMarkup.habitCreatedMarkup
 import com.j0rsa.bujo.telegram.BujoMarkup.periodMarkup
+import com.j0rsa.bujo.telegram.BujoMarkup.valueTypeMarkup
 import com.j0rsa.bujo.telegram.Lines
 import com.j0rsa.bujo.telegram.actor.common.*
 import com.j0rsa.bujo.telegram.api.model.HabitRequest
@@ -9,6 +10,7 @@ import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.api.model.ValueTemplate
 import com.j0rsa.bujo.telegram.monad.ActorContext
+import kotlinx.coroutines.channels.SendChannel
 import java.time.LocalDateTime
 
 /**
@@ -25,7 +27,8 @@ data class CreateHabitState(
 	var quote: String? = null,
 	var bad: Boolean? = null,
 	var startFrom: LocalDateTime? = null,
-	var values: List<ValueTemplate> = emptyList()
+	var values: List<ValueTemplate> = emptyList(),
+	var valuesActor: SendChannel<ActorMessage>? = null
 ) : ActorState(ctx)
 
 object HabitActor : StateMachineActor<CreateHabitState>(
@@ -83,8 +86,18 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 		state.quote = message.text.trim()
 		true
 	}),
+	mandatoryStep({
+		sendLocalizedMessage(state, Lines::doYouWantToAddValueMessage, valueTypeMarkup(state.user.language))
+	}, {
+		if (valuesActor == null) {
+			state.valuesActor = ValueTemplateActor().yield(ValueTemplateState(state.ctx,))
+		} else {
+			//do smt with actor
+		}
+		true
+	}),
 	executionStep {
-		val habitRequest = HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom)
+		val habitRequest = HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
 		ctx.client.createHabit(user.id, habitRequest).fold(
 			{
 				!sendLocalizedMessage(this, Lines::habitNotRegisteredMessage)

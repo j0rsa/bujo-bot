@@ -52,6 +52,6 @@ data class StreakRow(
 
 data class ValueTemplate(
     val type: ValueType,
-    val values: List<String> = emptyList(),
-    val name: String? = null
+    val name: String? = null,
+    val values: List<String> = emptyList()
 )

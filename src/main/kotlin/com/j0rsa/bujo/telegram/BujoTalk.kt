@@ -69,7 +69,12 @@ data class Lines(
     val viewHabitButton: String,
     val viewActionButton: String,
     val moodButton: String,
-    val endDateButton: String
+    val endDateButton: String,
+    val chooseTemplateValueTypeMessage: String,
+    val inputTemplateValueNameWithDefaultMessage: String,
+    val doYouWantToAddValueMessage: String,
+    val yesButton: String,
+    val noButton: String
 )
 
 enum class Language{

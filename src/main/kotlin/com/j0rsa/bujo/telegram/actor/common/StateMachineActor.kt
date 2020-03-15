@@ -68,7 +68,11 @@ open class StateMachineActor<T : ActorState>(
             }
         }
     companion object {
-        fun sendLocalizedMessage(state: ActorState, line: KProperty1<Lines, String>, replyMarkup: ReplyMarkup? = null) =
+        fun sendLocalizedMessage(
+            state: ActorState,
+            line: KProperty1<Lines, String>,
+            replyMarkup: ReplyMarkup? = null
+        ): Boolean =
             with(state) {
                 ctx.bot.sendMessage(
                     chatId = ctx.chatId,
@@ -140,9 +144,7 @@ fun <T : ActorState> mandatoryStep(
 ) =
     MandatoryStep(setup, action)
 
-fun <T : ActorState> executionStep(
-    exec: T.() -> Boolean
-) = TerminateStep(exec)
+fun <T : ActorState> executionStep(exec: T.() -> Boolean) = TerminateStep(exec)
 
 data class StepSetupDefinition<out T : ActorState>(val state: T)
 data class StepActionDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say)
