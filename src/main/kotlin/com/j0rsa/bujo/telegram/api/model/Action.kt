@@ -2,6 +2,8 @@ package com.j0rsa.bujo.telegram.api.model
 
 import com.j0rsa.bujo.telegram.ActionId
 import com.j0rsa.bujo.telegram.HabitId
+import com.j0rsa.bujo.telegram.Lines
+import kotlin.reflect.KProperty1
 
 /**
  * @author red
@@ -27,7 +29,7 @@ data class Value(
 	val name: String?
 )
 
-enum class ValueType {
-	Mood,
-	EndDate
+enum class ValueType(val caption: KProperty1<Lines, String>) {
+	Mood(Lines::moodButton),
+	EndDate(Lines::endDateButton);
 }

@@ -41,9 +41,17 @@ internal class AddValueActorTest : ActorBotTest() {
 		actorChannel.send(sayValue(deferredFinished))
 
 		verify(client).getUser(userId)
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueInitMessage), replyMarkup = valueTypeMarkup())
+		verify(bot).sendMessage(
+			chatId,
+			getLocalizedMessage(Lines::addActionValueInitMessage),
+			replyMarkup = valueTypeMarkup("en")
+		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage))
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueValueMessage), replyMarkup = defaultValueMarkup())
+		verify(bot).sendMessage(
+			chatId,
+			getLocalizedMessage(Lines::addActionValueValueMessage),
+			replyMarkup = defaultValueMarkup()
+		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
 		assertThat(deferredFinished.await()).isTrue()
 		actorChannel.close()
@@ -59,7 +67,11 @@ internal class AddValueActorTest : ActorBotTest() {
 		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
 		actorChannel.send(skip(deferredFinished))
 
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueInitMessage), replyMarkup = valueTypeMarkup())
+		verify(bot).sendMessage(
+			chatId,
+			getLocalizedMessage(Lines::addActionValueInitMessage),
+			replyMarkup = valueTypeMarkup("en")
+		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
 
 		assertThat(deferredFinished.await()).isFalse()
@@ -82,9 +94,17 @@ internal class AddValueActorTest : ActorBotTest() {
 
 		verify(client).getUser(userId)
 		verify(client).addValue(user.id, actionId, defaultValue())
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueInitMessage), replyMarkup = valueTypeMarkup())
+		verify(bot).sendMessage(
+			chatId,
+			getLocalizedMessage(Lines::addActionValueInitMessage),
+			replyMarkup = valueTypeMarkup("en")
+		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage))
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueValueMessage), replyMarkup = defaultValueMarkup())
+		verify(bot).sendMessage(
+			chatId,
+			getLocalizedMessage(Lines::addActionValueValueMessage),
+			replyMarkup = defaultValueMarkup()
+		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
 
@@ -106,9 +126,17 @@ internal class AddValueActorTest : ActorBotTest() {
 		actorChannel.send(sayValue(deferredFinished))
 
 		verify(client).getUser(userId)
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueInitMessage), replyMarkup = valueTypeMarkup())
+		verify(bot).sendMessage(
+			chatId,
+			getLocalizedMessage(Lines::addActionValueInitMessage),
+			replyMarkup = valueTypeMarkup("en")
+		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage))
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueValueMessage), replyMarkup = defaultValueMarkup())
+		verify(bot).sendMessage(
+			chatId,
+			getLocalizedMessage(Lines::addActionValueValueMessage),
+			replyMarkup = defaultValueMarkup()
+		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
 		verify(client).addValue(user.id, actionId, defaultValue())
 		assertThat(deferredFinished.await()).isTrue()

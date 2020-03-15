@@ -31,9 +31,15 @@ object BujoMarkup {
         )
     }
 
-    fun valueTypeMarkup(): InlineKeyboardMarkup = InlineKeyboardMarkup(listOf(ValueType.values().flatMap {
-        listOf(InlineKeyboardButton(text = it.name, callbackData = "$CALLBACK_ACTOR_TEMPLATE:${it.name}"))
-    }))
+    fun valueTypeMarkup(language: String): InlineKeyboardMarkup =
+        InlineKeyboardMarkup(listOf(ValueType.values().flatMap {
+            listOf(
+                InlineKeyboardButton(
+                    text = it.caption.get(BujoTalk.withLanguage(language)),
+                    callbackData = "$CALLBACK_ACTOR_TEMPLATE:${it.name}"
+                )
+            )
+        }))
 
     fun createdActionMarkup(language: String, actionId: ActionId): InlineKeyboardMarkup =
         with(BujoTalk.withLanguage(language)) {

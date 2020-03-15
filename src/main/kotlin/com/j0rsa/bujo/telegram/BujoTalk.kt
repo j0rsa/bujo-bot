@@ -67,7 +67,9 @@ data class Lines(
     val habitRegisteredMessage: String,
     val habitNotRegisteredMessage: String,
     val viewHabitButton: String,
-    val viewActionButton: String
+    val viewActionButton: String,
+    val moodButton: String,
+    val endDateButton: String
 )
 
 enum class Language{

@@ -22,7 +22,7 @@ data class AddValueState(
 
 object AddValueActor : StateMachineActor<AddValueState>(
 	mandatoryStep({
-		sendLocalizedMessage(state, Lines::addActionValueInitMessage, valueTypeMarkup())
+		sendLocalizedMessage(state, Lines::addActionValueInitMessage, valueTypeMarkup(state.user.language))
 	}, {
 		try {
 			state.type = ValueType.valueOf(message.text)
