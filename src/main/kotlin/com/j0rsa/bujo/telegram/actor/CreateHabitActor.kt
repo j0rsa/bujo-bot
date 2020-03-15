@@ -89,10 +89,10 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 	mandatoryStep({
 		sendLocalizedMessage(state, Lines::doYouWantToAddValueMessage, valueTypeMarkup(state.user.language))
 	}, {
-		if (valuesActor == null) {
+		if (state.valuesActor == null) {
 			state.valuesActor = ValueTemplateActor().yield(ValueTemplateState(state.ctx,))
 		} else {
-			//do smt with actor
+			//TODO: do smt with actor
 		}
 		true
 	}),
