@@ -4,7 +4,6 @@ import com.j0rsa.bujo.telegram.BujoMarkup.createdActionMarkup
 import com.j0rsa.bujo.telegram.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorState
 import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
-import com.j0rsa.bujo.telegram.actor.common.initStep
 import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
@@ -21,14 +20,16 @@ data class CreateActionState(
 ) : ActorState(ctx)
 
 object CreateActionActor : StateMachineActor<CreateActionState>(
-	initStep {
-		sendLocalizedMessage(state, Lines::actionCreationInitMessage)
-	},
-	mandatoryStep {
-		state.actionDescription = message.text
+	mandatoryStep(
+		{
+			sendLocalizedMessage(state, Lines::actionCreationInitMessage)
+		}, {
+			state.actionDescription = message.text
+			true
+		}),
+	mandatoryStep({
 		sendLocalizedMessage(state, Lines::actionCreationTagsInput)
-	},
-	mandatoryStep {
+	}, {
 		state.tags = message.text.split(",").map { TagRequest.fromString(it) }
 		with(state) {
 			ctx.client.createAction(user.id, ActionRequest(actionDescription, tags)).fold(
@@ -42,5 +43,5 @@ object CreateActionActor : StateMachineActor<CreateActionState>(
 					)
 				})
 		}
-	}
+	})
 )

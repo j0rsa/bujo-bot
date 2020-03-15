@@ -29,18 +29,21 @@ data class CreateHabitState(
 ) : ActorState(ctx)
 
 object HabitActor : StateMachineActor<CreateHabitState>(
-	initStep {
+	mandatoryStep({
 		sendLocalizedMessage(state, Lines::createHabitInitMessage)
-	},
-	mandatoryStep {
+	}, {
 		state.name = message.text
+		true
+	}),
+	mandatoryStep({
 		sendLocalizedMessage(state, Lines::createHabitTagsMessage)
-	},
-	mandatoryStep {
+	}, {
 		state.tags = message.text.split(",").map { TagRequest.fromString(it) }
+		true
+	}),
+	mandatoryStep({
 		sendLocalizedMessage(state, Lines::createHabitPeriodMessage, periodMarkup(state.user.language))
-	},
-	mandatoryStep {
+	}, {
 		when (val period = Period.values().find { it.name == message.text }) {
 			null -> {
 				!sendLocalizedMessage(
@@ -54,14 +57,16 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 			}
 			else -> {
 				state.period = period
-				sendLocalizedMessage(state, Lines::createHabitNumberOfRepetitionsMessage)
+				true
 			}
 		}
-	},
-	mandatoryStep {
+	}),
+	mandatoryStep({
+		sendLocalizedMessage(state, Lines::createHabitNumberOfRepetitionsMessage)
+	}, {
 		try {
 			state.numberOfRepetitions = Integer.parseUnsignedInt(message.text)
-			sendLocalizedMessage(state, listOf(Lines::createHabitQuoteMessage, Lines::orTapSkipMessage))
+			true
 		} catch (e: NumberFormatException) {
 			!sendLocalizedMessage(
 				state,
@@ -71,22 +76,18 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 				)
 			)
 		}
-	},
+	}),
 	optionalStep({
+		sendLocalizedMessage(state, listOf(Lines::createHabitQuoteMessage, Lines::orTapSkipMessage))
+	}, {
 		state.quote = message.text.trim()
 		true
-	}, {
+	}),
+	executionStep {
 		val habitRequest = HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom)
 		ctx.client.createHabit(user.id, habitRequest).fold(
 			{
-				!sendLocalizedMessage(
-					this,
-					listOf(
-						Lines::habitNotRegisteredMessage,
-						Lines::createHabitQuoteMessage,
-						Lines::orTapSkipMessage
-					)
-				)
+				!sendLocalizedMessage(this, Lines::habitNotRegisteredMessage)
 			},
 			{ habitId ->
 				sendLocalizedMessage(
@@ -95,5 +96,5 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 					habitCreatedMarkup(user.language, habitId)
 				)
 			})
-	})
+	}
 )

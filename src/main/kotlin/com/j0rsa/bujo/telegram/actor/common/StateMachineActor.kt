@@ -18,8 +18,8 @@ import kotlin.reflect.KProperty1
  */
 
 open class StateMachineActor<T : ActorState>(
-    private val initStep: InitStep<T>,
-    private vararg val steps: ActorStep<T>
+    private vararg val steps: ActorStep<T>,
+    private val initStep: InitStep<T> = InitStep { true }
 ) : Actor<T> {
     private val logger = LoggerFactory.getLogger(this::class.java.name)
 
@@ -30,14 +30,14 @@ open class StateMachineActor<T : ActorState>(
                 val iterator = steps.iterator()
                 fun nextStep(message: ActorMessage? = null): ActorStep<T> =
                     if (iterator.hasNext()) {
-                        message?.unComplete()
                         iterator.next()
                     } else {
-                        message?.complete()
-                        logger.debug("Entering terminate state")
-                        TerminateStep
+                        TerminateStep()
                     }
-                initStep(state)
+                        .apply { if (this is TerminateStep) message?.complete() else message?.unComplete() }
+                        .apply { init(state) }
+
+                initStep.init(state)
                 var currentStep = nextStep()
                 for (message in channel) {
                     currentStep = when (message) {
@@ -48,11 +48,7 @@ open class StateMachineActor<T : ActorState>(
                         }
                         is ActorMessage.Skip -> {
                             when (currentStep) {
-                                is OptionalStep<*> -> if (currentStep.skip(state)) {
-                                    nextStep(message)
-                                } else {
-                                    currentStep
-                                }
+                                is OptionalStep<*> -> nextStep(message)
                                 is MandatoryStep<*> -> {
                                     sendLocalizedMessage(state, Lines::stepCannotBeSkippedMessage)
                                     message.unComplete()
@@ -102,41 +98,51 @@ abstract class ActorState(
 )
 
 sealed class ActorStep<in T : ActorState>(
-    private val action: StepDefinition<T>.() -> Boolean,
-    private val caption: T.() -> Boolean = { true }
+    private val setup: StepSetupDefinition<T>.() -> Boolean,
+    private val action: StepActionDefinition<T>.() -> Boolean
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java.name)
+    open fun init(state: T): Boolean = setup(StepSetupDefinition(state))
     open operator fun invoke(state: T, message: ActorMessage.Say = ActorMessage.Say("")): Boolean =
-        with(StepDefinition(state, message)) {
-            val actionResult = action(this)
-            val captionResult = caption(state)
-            logger.debug("Step finished with the results. Action:$actionResult, Caption:$captionResult")
-            actionResult && captionResult
-        }
-
-    fun skip(state: T) = caption(state)
+        action(StepActionDefinition(state, message))
 }
 
-typealias InitStep<T> = MandatoryStep<T>
+class OptionalStep<T : ActorState>(
+    setup: StepSetupDefinition<T>.() -> Boolean,
+    action: StepActionDefinition<T>.() -> Boolean
+) :
+    ActorStep<T>(setup, action)
 
-class OptionalStep<T : ActorState>(action: StepDefinition<T>.() -> Boolean, caption: T.() -> Boolean) :
-    ActorStep<T>(action, caption)
+class MandatoryStep<T : ActorState>(
+    setup: StepSetupDefinition<T>.() -> Boolean,
+    action: StepActionDefinition<T>.() -> Boolean
+) :
+    ActorStep<T>(setup, action)
 
-class MandatoryStep<T : ActorState>(action: StepDefinition<T>.() -> Boolean) : ActorStep<T>(action)
-
-object TerminateStep : ActorStep<ActorState>({
+class TerminateStep<T : ActorState>(
+    setup: T.() -> Boolean = { true }
+) : ActorStep<T>({ setup(state) }, {
     sendLocalizedMessage(state, Lines::terminatorStepMessage)
     false
 })
 
+typealias InitStep<T> = TerminateStep<T>
 
-fun <T : ActorState> optionalStep(action: StepDefinition<T>.() -> Boolean, caption: T.() -> Boolean) =
-    OptionalStep(action, caption)
+fun <T : ActorState> optionalStep(
+    setup: StepSetupDefinition<T>.() -> Boolean,
+    action: StepActionDefinition<T>.() -> Boolean
+) =
+    OptionalStep(setup, action)
 
-fun <T : ActorState> initStep(action: StepDefinition<T>.() -> Boolean) =
-    MandatoryStep(action)
+fun <T : ActorState> mandatoryStep(
+    setup: StepSetupDefinition<T>.() -> Boolean,
+    action: StepActionDefinition<T>.() -> Boolean
+) =
+    MandatoryStep(setup, action)
 
-fun <T : ActorState> mandatoryStep(action: StepDefinition<T>.() -> Boolean) =
-    MandatoryStep(action)
+fun <T : ActorState> executionStep(
+    exec: T.() -> Boolean
+) = TerminateStep(exec)
 
-data class StepDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say)
+data class StepSetupDefinition<out T : ActorState>(val state: T)
+data class StepActionDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say)
