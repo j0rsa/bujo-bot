@@ -34,6 +34,7 @@ object BujoTalk {
 data class Lines(
     val welcome: String,
     val showHabitsMessage: String,
+    val createHabitButton: String,
     val showHabitsButton: String,
     val createActionButton: String,
     val settingsButton: String,

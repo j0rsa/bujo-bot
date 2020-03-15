@@ -1,8 +1,12 @@
 package com.j0rsa.bujo.telegram
 
-import com.j0rsa.bujo.telegram.api.model.*
+import com.j0rsa.bujo.telegram.api.model.Action
+import com.j0rsa.bujo.telegram.api.model.Period
+import com.j0rsa.bujo.telegram.api.model.ValueType
 import me.ivmg.telegram.entities.InlineKeyboardButton
 import me.ivmg.telegram.entities.InlineKeyboardMarkup
+import me.ivmg.telegram.entities.KeyboardButton
+import me.ivmg.telegram.entities.KeyboardReplyMarkup
 import java.time.LocalDateTime
 
 /**
@@ -11,6 +15,22 @@ import java.time.LocalDateTime
  */
 
 object BujoMarkup {
+    fun permanentMarkup(language: String?) = with(BujoTalk.withLanguage(language)) {
+        KeyboardReplyMarkup(
+            listOf(
+                listOf(
+                    KeyboardButton(showHabitsButton),
+                    KeyboardButton(createHabitButton),
+                    KeyboardButton(createActionButton)
+                ),
+                listOf(
+                    KeyboardButton(settingsButton)
+                )
+            ),
+            resizeKeyboard = true
+        )
+    }
+
     fun valueTypeMarkup(): InlineKeyboardMarkup = InlineKeyboardMarkup(listOf(ValueType.values().flatMap {
         listOf(InlineKeyboardButton(text = it.name, callbackData = "$CALLBACK_ACTOR_TEMPLATE:${it.name}"))
     }))
@@ -67,11 +87,11 @@ object BujoMarkup {
                 listOf(
                     InlineKeyboardButton(
                         text = periodDailyButton,
-                        callbackData = "$CALLBACK_ACTOR_TEMPLATE:${Period.DAILY}"
+                        callbackData = "$CALLBACK_ACTOR_TEMPLATE:${Period.Day}"
                     ),
                     InlineKeyboardButton(
                         text = periodWeeklyButton,
-                        callbackData = "$CALLBACK_ACTOR_TEMPLATE:${Period.WEEKLY}"
+                        callbackData = "$CALLBACK_ACTOR_TEMPLATE:${Period.Week}"
                     )
                 )
             )

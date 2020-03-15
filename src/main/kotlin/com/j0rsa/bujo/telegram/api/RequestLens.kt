@@ -1,5 +1,7 @@
 package com.j0rsa.bujo.telegram.api
 
+import com.j0rsa.bujo.telegram.ActionId
+import com.j0rsa.bujo.telegram.HabitId
 import com.j0rsa.bujo.telegram.api.model.*
 import org.http4k.core.Body
 import org.http4k.format.Gson.auto

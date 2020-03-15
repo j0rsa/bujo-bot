@@ -1,13 +1,10 @@
 package com.j0rsa.bujo.telegram
 
 import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
-import com.j0rsa.bujo.telegram.actor.AddValueActor
-import com.j0rsa.bujo.telegram.actor.AddValueState
-import com.j0rsa.bujo.telegram.actor.CreateActionActor
-import com.j0rsa.bujo.telegram.actor.CreateActionState
+import com.j0rsa.bujo.telegram.BujoMarkup.permanentMarkup
+import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.TrackerClient
-import com.j0rsa.bujo.telegram.api.model.ActionId
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
 import com.j0rsa.bujo.telegram.monad.ActorContext
@@ -82,21 +79,10 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     else -> BujoTalk.withLanguage(it.languageCode).genericError
                 }
 				bot.sendMessage(
-					message.chat.id,
-					text,
-					replyMarkup = KeyboardReplyMarkup(
-                        listOf(
-                            listOf(
-                                KeyboardButton(BujoTalk.withLanguage(message.from?.languageCode).showHabitsButton),
-                                KeyboardButton(BujoTalk.withLanguage(message.from?.languageCode).createActionButton)
-                            ),
-                            listOf(
-                                KeyboardButton(BujoTalk.withLanguage(message.from?.languageCode).settingsButton)
-                            )
-                        ),
-                        resizeKeyboard = true
-                    )
-				)
+                    message.chat.id,
+                    text,
+                    replyMarkup = permanentMarkup(message.from?.languageCode)
+                )
 			}
 		}
 	}
@@ -148,34 +134,24 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 				val trackerUser = TrackerClient.getUser(BotUserId(user.id))
 				val habits = TrackerClient.getHabits(trackerUser.id)
 				bot.sendMessage(
-					message.chat.id,
-					text = BujoTalk.withLanguage(user.languageCode).showHabitsMessage,
-					replyMarkup = InlineKeyboardMarkup(
-						habits.toHabitsInlineKeys()
-					)
-				)
-			}
-		}
-	}
+                    message.chat.id,
+                    text = BujoTalk.withLanguage(user.languageCode).showHabitsMessage,
+                    replyMarkup = InlineKeyboardMarkup(
+                        habits.toHabitsInlineKeys()
+                    )
+                )
+            }
+        }
+    }
 
-	fun createAction(bot: Bot, update: Update) {
-		update.message?.let { message ->
-			message.from?.let { user: User ->
-				launch {
-					val userId = BotUserId(user)
-					userActors[userId]?.close()
-					userActors[userId] = CreateActionActor.yield(
-						CreateActionState(
-							ActorContext(ChatId(message), userId, BujoBot(bot), this)
-						)
-					)
-				}
-			}
-		}
-	}
+    fun createAction(bot: Bot, update: Update) = initNewActor(bot, update) { _, _, ctx ->
+        CreateActionActor.yield(
+            CreateActionState(ctx)
+        )
+    }
 
-	fun addValue(message: CallbackMessage) {
-		launch {
+    fun addValue(message: CallbackMessage) {
+        launch {
             userActors[message.userId]?.close()
             userActors[message.userId] = AddValueActor.yield(
                 AddValueState(
@@ -203,6 +179,32 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     )
                 )
             )
+        }
+    }
+
+    fun createHabit(bot: Bot, update: Update) = initNewActor(bot, update) { _, _, ctx ->
+        HabitActor.yield(
+            CreateHabitState(ctx)
+        )
+    }
+
+    private fun initNewActor(
+        bot: Bot,
+        update: Update,
+        init: (user: User, message: Message, ctx: ActorContext) -> SendChannel<ActorMessage>
+    ) {
+        update.message?.let { message ->
+            message.from?.let { user: User ->
+                launch {
+                    val userId = BotUserId(user)
+                    userActors[userId]?.close()
+                    userActors[userId] = init(
+                        user,
+                        message,
+                        ActorContext(ChatId(message), BotUserId(user), BujoBot(bot), this)
+                    )
+                }
+            }
         }
     }
 

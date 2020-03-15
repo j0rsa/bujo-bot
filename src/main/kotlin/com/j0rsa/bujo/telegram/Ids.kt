@@ -2,6 +2,7 @@ package com.j0rsa.bujo.telegram
 
 import me.ivmg.telegram.entities.Message
 import me.ivmg.telegram.entities.User
+import java.util.*
 
 /**
  * @author red
@@ -14,4 +15,20 @@ inline class BotUserId(val value: Long) {
 
 inline class ChatId(val value: Long) {
     constructor(message: Message) : this(message.chat.id)
+}
+
+inline class HabitId(val value: UUID) {
+    companion object {
+        fun randomValue() = HabitId(UUID.randomUUID())
+    }
+}
+
+inline class ActionId(val value: UUID) {
+    companion object {
+        fun randomValue() =
+            ActionId(UUID.randomUUID())
+
+        fun fromString(s: String) =
+            ActionId(UUID.fromString(s))
+    }
 }

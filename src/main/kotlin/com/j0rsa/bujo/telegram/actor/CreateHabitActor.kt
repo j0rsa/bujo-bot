@@ -7,6 +7,7 @@ import com.j0rsa.bujo.telegram.actor.common.*
 import com.j0rsa.bujo.telegram.api.model.HabitRequest
 import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.TagRequest
+import com.j0rsa.bujo.telegram.api.model.ValueTemplate
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import java.time.LocalDateTime
 
@@ -20,10 +21,11 @@ data class CreateHabitState(
 	var name: String = "",
 	var tags: List<TagRequest> = emptyList(),
 	var numberOfRepetitions: Int = 0,
-	var period: Period = Period.DAILY,
+	var period: Period = Period.Day,
 	var quote: String? = null,
 	var bad: Boolean? = null,
-	var startFrom: LocalDateTime? = null
+	var startFrom: LocalDateTime? = null,
+	var values: List<ValueTemplate> = emptyList()
 ) : ActorState(ctx)
 
 object HabitActor : StateMachineActor<CreateHabitState>(
@@ -74,16 +76,22 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 		state.quote = message.text.trim()
 		true
 	}, {
-		ctx.client.createHabit(
-			user.id, HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom)
-		).fold(
+		val habitRequest = HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom)
+		ctx.client.createHabit(user.id, habitRequest).fold(
 			{
-				!sendLocalizedMessage(this, Lines::actionNotRegisteredMessage)
+				!sendLocalizedMessage(
+					this,
+					listOf(
+						Lines::habitNotRegisteredMessage,
+						Lines::createHabitQuoteMessage,
+						Lines::orTapSkipMessage
+					)
+				)
 			},
 			{ habitId ->
 				sendLocalizedMessage(
 					this,
-					Lines::actionRegisteredMessage,
+					Lines::habitRegisteredMessage,
 					habitCreatedMarkup(user.language, habitId)
 				)
 			})

@@ -27,18 +27,19 @@ class App {
 			logLevel = HttpLoggingInterceptor.Level.NONE
 			dispatch {
 				command("start") { bot, update -> BujoLogic.registerTelegramUser(bot, update) }
-				command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
-				command("skip") { _, update -> handleActorMessage(update, Skip) }
-				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
-				message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
-				message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
-				message(Filter.Text and notTextButton()) { _, update ->
-					val message = update.message ?: return@message
-					val userId = BotUserId(message.from ?: return@message)
-					val text = message.text ?: return@message
+                command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
+                command("skip") { _, update -> handleActorMessage(update, Skip) }
+                message(CreateHabitButtonFilter) { bot, update -> BujoLogic.createHabit(bot, update) }
+                message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
+                message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
+                message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
+                message(Filter.Text and notTextButton()) { _, update ->
+                    val message = update.message ?: return@message
+                    val userId = BotUserId(message.from ?: return@message)
+                    val text = message.text ?: return@message
 
-					handleActorMessage(HandleActorMessage(userId, ChatId(message), text))
-				}
+                    handleActorMessage(HandleActorMessage(userId, ChatId(message), text))
+                }
 				callbackQuery(CALLBACK_ADD_VALUE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					val message = callbackQuery.message ?: return@callbackQuery
@@ -97,24 +98,30 @@ class App {
 		@JvmStatic
 		fun main(args: Array<String>) {
 			App().run()
-		}
+        }
 
-		private fun notTextButton() =
-			listOf(
-				ShowHabitsButtonFilter,
-				CreateActionButtonFilter,
-				SettingsButtonFilter
-			).fold(Filter.All as Filter, { acc, filter -> acc and filter.not() })
+        private fun notTextButton() =
+            listOf(
+                ShowHabitsButtonFilter,
+                CreateHabitButtonFilter,
+                CreateActionButtonFilter,
+                SettingsButtonFilter
+            ).fold(Filter.All as Filter, { acc, filter -> acc and filter.not() })
 
-		object ShowHabitsButtonFilter : Filter {
-			override fun Message.predicate(): Boolean =
-				text == BujoTalk.withLanguage(from?.languageCode).showHabitsButton
-		}
+        object CreateHabitButtonFilter : Filter {
+            override fun Message.predicate(): Boolean =
+                text == BujoTalk.withLanguage(from?.languageCode).createHabitButton
+        }
 
-		object CreateActionButtonFilter : Filter {
-			override fun Message.predicate(): Boolean =
-				text == BujoTalk.withLanguage(from?.languageCode).createActionButton
-		}
+        object ShowHabitsButtonFilter : Filter {
+            override fun Message.predicate(): Boolean =
+                text == BujoTalk.withLanguage(from?.languageCode).showHabitsButton
+        }
+
+        object CreateActionButtonFilter : Filter {
+            override fun Message.predicate(): Boolean =
+                text == BujoTalk.withLanguage(from?.languageCode).createActionButton
+        }
 
 		object SettingsButtonFilter : Filter {
 			override fun Message.predicate(): Boolean =

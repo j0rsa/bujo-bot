@@ -1,6 +1,7 @@
 package com.j0rsa.bujo.telegram.api.model
 
-import java.util.*
+import com.j0rsa.bujo.telegram.ActionId
+import com.j0rsa.bujo.telegram.HabitId
 
 /**
  * @author red
@@ -19,13 +20,6 @@ data class Action(
 	val id: ActionId? = null,
 	val values: List<Value> = emptyList()
 )
-
-inline class ActionId(val value: UUID) {
-	companion object {
-		fun randomValue() = ActionId(UUID.randomUUID())
-		fun fromString(s: String) = ActionId(UUID.fromString(s))
-	}
-}
 
 data class Value(
 	val type: ValueType,

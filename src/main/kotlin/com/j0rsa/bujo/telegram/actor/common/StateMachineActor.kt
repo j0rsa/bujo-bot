@@ -9,6 +9,7 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import me.ivmg.telegram.entities.ReplyMarkup
+import org.slf4j.LoggerFactory
 import kotlin.reflect.KProperty1
 
 /**
@@ -20,6 +21,8 @@ open class StateMachineActor<T : ActorState>(
     private val initStep: InitStep<T>,
     private vararg val steps: ActorStep<T>
 ) : Actor<T> {
+    private val logger = LoggerFactory.getLogger(this::class.java.name)
+
     @OptIn(ObsoleteCoroutinesApi::class)
     override fun yield(state: T): SendChannel<ActorMessage> =
         with(state.ctx.scope) {
@@ -31,6 +34,7 @@ open class StateMachineActor<T : ActorState>(
                         iterator.next()
                     } else {
                         message?.complete()
+                        logger.debug("Entering terminate state")
                         TerminateStep
                     }
                 initStep(state)
@@ -44,7 +48,11 @@ open class StateMachineActor<T : ActorState>(
                         }
                         is ActorMessage.Skip -> {
                             when (currentStep) {
-                                is OptionalStep<*> -> currentStep.skip(state).run { nextStep(message) }
+                                is OptionalStep<*> -> if (currentStep.skip(state)) {
+                                    nextStep(message)
+                                } else {
+                                    currentStep
+                                }
                                 is MandatoryStep<*> -> {
                                     sendLocalizedMessage(state, Lines::stepCannotBeSkippedMessage)
                                     message.unComplete()
@@ -97,9 +105,13 @@ sealed class ActorStep<in T : ActorState>(
     private val action: StepDefinition<T>.() -> Boolean,
     private val caption: T.() -> Boolean = { true }
 ) {
+    private val logger = LoggerFactory.getLogger(this::class.java.name)
     open operator fun invoke(state: T, message: ActorMessage.Say = ActorMessage.Say("")): Boolean =
         with(StepDefinition(state, message)) {
-            action(this).also { caption(state) }
+            val actionResult = action(this)
+            val captionResult = caption(state)
+            logger.debug("Step finished with the results. Action:$actionResult, Caption:$captionResult")
+            actionResult && captionResult
         }
 
     fun skip(state: T) = caption(state)

@@ -1,8 +1,8 @@
 package com.j0rsa.bujo.telegram.api.model
 
+import com.j0rsa.bujo.telegram.HabitId
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.util.*
 
 /**
  * @author red
@@ -16,7 +16,8 @@ data class HabitRequest(
     val period: Period,
     val quote: String?,
     val bad: Boolean?,
-    val startFrom: LocalDateTime?
+    val startFrom: LocalDateTime?,
+    val values: List<ValueTemplate> = emptyList()
 )
 
 data class Habit(
@@ -31,7 +32,7 @@ data class Habit(
 )
 
 enum class Period {
-    WEEKLY, DAILY
+    Week, Day
 }
 
 data class HabitsInfo(
@@ -49,8 +50,8 @@ data class StreakRow(
     val maxStreak: BigDecimal = BigDecimal.ZERO
 )
 
-inline class HabitId(val value: UUID) {
-    companion object {
-        fun randomValue() = HabitId(UUID.randomUUID())
-    }
-}
+data class ValueTemplate(
+    val type: ValueType,
+    val values: List<String> = emptyList(),
+    val name: String? = null
+)
