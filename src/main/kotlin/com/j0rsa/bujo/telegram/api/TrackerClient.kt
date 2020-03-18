@@ -46,7 +46,7 @@ object TrackerClient : Client {
 	)
 
 	override fun health(): Boolean =
-		client("/health".get()).status == Status.OK
+		client("/health".get()).status.code / 100 == 2
 
 	override fun createUser(userRequest: CreateUserRequest): Pair<UserId?, Status> {
 		val response = client(
