@@ -1,7 +1,7 @@
 package com.j0rsa.bujo.telegram.actor.common
 
-import com.j0rsa.bujo.telegram.BujoTalk
-import com.j0rsa.bujo.telegram.Lines
+import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
+import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.api.model.User
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.ObsoleteCoroutinesApi

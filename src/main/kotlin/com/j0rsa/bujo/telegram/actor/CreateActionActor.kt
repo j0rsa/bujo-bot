@@ -1,6 +1,6 @@
 package com.j0rsa.bujo.telegram.actor
 
-import com.j0rsa.bujo.telegram.Lines
+import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorState
 import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
 import com.j0rsa.bujo.telegram.actor.common.mandatoryStep

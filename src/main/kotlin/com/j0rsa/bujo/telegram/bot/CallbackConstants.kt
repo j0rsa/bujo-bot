@@ -1,4 +1,4 @@
-package com.j0rsa.bujo.telegram
+package com.j0rsa.bujo.telegram.bot
 
 /**
  * @author red

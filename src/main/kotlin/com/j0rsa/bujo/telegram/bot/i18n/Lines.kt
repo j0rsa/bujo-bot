@@ -1,35 +1,9 @@
-package com.j0rsa.bujo.telegram
-
-import com.typesafe.config.ConfigFactory
-import io.github.config4k.extract
+package com.j0rsa.bujo.telegram.bot.i18n
 
 /**
  * @author red
- * @since 09.02.20
+ * @since 21.03.20
  */
-  
-object BujoTalk {
-    private val translations = Language.values().map {
-        val classLoader = BujoTalk::class.java.classLoader
-        val resourceName = "i18n/${it.name.toLowerCase()}_lines.conf"
-        it to ConfigFactory.parseResources(classLoader, resourceName).extract<Lines>()
-    }.toMap()
-
-    fun getSupportedLanguageCodesWithFlags(): List<Pair<Language, String>> =
-        listOf(
-            Language.EN to "\uD83C\uDDEC\uD83C\uDDE7",
-            Language.RU to "\uD83C\uDDF7\uD83C\uDDFA",
-            Language.DE to "\uD83C\uDDE9\uD83C\uDDEA"
-        )
-
-    private fun getLanguage(languageCode: String?): Language =
-        languageCode?.let {
-            if (it.isNotBlank()) Language.valueOf(it.toUpperCase()) else Language.EN
-        } ?: Language.EN
-
-    fun withLanguage(languageCode: String?): Lines =
-        translations[getLanguage(languageCode)] ?: error("With some magic language was not found")
-}
 
 data class Lines(
     val welcome: String,
@@ -77,9 +51,3 @@ data class Lines(
     val noHabitsRegistered: String,
     val valueAddedMessage: String
 )
-
-enum class Language{
-    EN,
-    RU,
-    DE
-}

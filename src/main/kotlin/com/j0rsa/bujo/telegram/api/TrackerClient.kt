@@ -16,6 +16,7 @@ import com.j0rsa.bujo.telegram.api.RequestLens.telegramUserIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.userLens
 import com.j0rsa.bujo.telegram.api.RequestLens.valueRequestLens
 import com.j0rsa.bujo.telegram.api.model.*
+import com.j0rsa.bujo.telegram.bot.*
 import com.j0rsa.bujo.telegram.monad.Client
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor

@@ -1,9 +1,10 @@
-package com.j0rsa.bujo.telegram
+package com.j0rsa.bujo.telegram.bot
 
-import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
-import com.j0rsa.bujo.telegram.BujoMarkup.createdActionMarkup
-import com.j0rsa.bujo.telegram.BujoMarkup.habitCreatedMarkup
-import com.j0rsa.bujo.telegram.BujoMarkup.permanentMarkup
+import com.j0rsa.bujo.telegram.*
+import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
+import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.habitCreatedMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.permanentMarkup
 import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.TrackerClient
@@ -11,6 +12,9 @@ import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
 import com.j0rsa.bujo.telegram.api.model.HabitRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
+import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
+import com.j0rsa.bujo.telegram.bot.i18n.Language
+import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,7 +68,8 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 		update.message?.let { message ->
 			bot.sendMessage(
 				message.chat.id,
-				BujoTalk.getSupportedLanguageCodesWithFlags().first { it.first == Language.valueOf(message.from!!.languageCode!!.toUpperCase()) }.second
+				BujoTalk.getSupportedLanguageCodesWithFlags()
+                    .first { it.first == Language.valueOf(message.from!!.languageCode!!.toUpperCase()) }.second
 			)
 		}
 	}
@@ -172,24 +177,28 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
-    fun createAction(bot: Bot, update: Update) = initNewActor(bot, update) { _, _, ctx ->
-        CreateActionActor.yield(
-            CreateActionState(ctx)
-        ) {
-            cause ?: with(state) {
-                ctx.client.createAction(trackerUser.id, ActionRequest(actionDescription, tags)).fold(
-                    {
-                        !sendLocalizedMessage(state, Lines::actionNotRegisteredMessage)
-                    },
-                    { actionId ->
-                        sendLocalizedMessage(
-                            state, Lines::actionRegisteredMessage,
-                            createdActionMarkup(state.trackerUser.language, actionId)
-                        )
-                    })
+    fun createAction(bot: Bot, update: Update) =
+        initNewActor(bot, update) { _, _, ctx ->
+            CreateActionActor.yield(
+                CreateActionState(ctx)
+            ) {
+                cause ?: with(state) {
+                    ctx.client.createAction(trackerUser.id, ActionRequest(actionDescription, tags)).fold(
+                        {
+                            !sendLocalizedMessage(
+                                state,
+                                Lines::actionNotRegisteredMessage
+                            )
+                        },
+                        { actionId ->
+                            sendLocalizedMessage(
+                                state, Lines::actionRegisteredMessage,
+                                createdActionMarkup(state.trackerUser.language, actionId)
+                            )
+                        })
+                }
             }
         }
-    }
 
     fun addValue(message: CallbackMessage) {
         launch {
@@ -223,27 +232,36 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
-    fun createHabit(bot: Bot, update: Update) = initNewActor(bot, update) { user, _, ctx ->
-        HabitActor.yield(
-            CreateHabitState(ctx)
-        ) {
-            cause ?: with(state) {
-                val habitRequest = HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
-                ctx.client.createHabit(trackerUser.id, habitRequest).fold(
-                    {
-                        !sendLocalizedMessage(this, Lines::habitNotRegisteredMessage)
-                    },
-                    { habitId ->
-                        sendLocalizedMessage(
-                            this,
-                            Lines::habitRegisteredMessage,
-                            habitCreatedMarkup(trackerUser.language, habitId)
+    fun createHabit(bot: Bot, update: Update) =
+        initNewActor(bot, update) { user, _, ctx ->
+            HabitActor.yield(
+                CreateHabitState(ctx)
+            ) {
+                cause ?: with(state) {
+                    val habitRequest =
+                        HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
+                    ctx.client.createHabit(trackerUser.id, habitRequest).fold(
+                        {
+                            !sendLocalizedMessage(
+                                this,
+                                Lines::habitNotRegisteredMessage
+                            )
+                        },
+                        { habitId ->
+                            sendLocalizedMessage(
+                                this,
+                                Lines::habitRegisteredMessage,
+                                habitCreatedMarkup(trackerUser.language, habitId)
+                            )
+                        })
+                    userActors.remove(
+                        BotUserId(
+                            user
                         )
-                    })
-                userActors.remove(BotUserId(user))
+                    )
+                }
             }
         }
-    }
 
     private fun initNewActor(
         bot: Bot,
@@ -258,7 +276,10 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     userActors[userId] = init(
                         user,
                         message,
-                        ActorContext(ChatId(message), BotUserId(user), BujoBot(bot), this)
+                        ActorContext(
+                            ChatId(message),
+                            BotUserId(user),
+                            BujoBot(bot), this)
                     )
                 }
             }
@@ -276,24 +297,24 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 }
 
 sealed class BotMessage(
-	private val bot: BujoBot,
-	private val chatId: ChatId,
-	val userId: BotUserId
+    private val bot: BujoBot,
+    private val chatId: ChatId,
+    val userId: BotUserId
 ) {
 	class CallbackMessage(
-		bot: BujoBot,
-		userId: BotUserId,
-		chatId: ChatId,
-		val callBackData: String
+        bot: BujoBot,
+        userId: BotUserId,
+        chatId: ChatId,
+        val callBackData: String
 	) : BotMessage(bot, chatId, userId)
 
 	fun toContext(scope: CoroutineScope) = ActorContext(chatId, userId, bot, scope)
 }
 
 class HandleActorMessage(
-	val userId: BotUserId,
-	val chatId: ChatId,
-	val text: String
+    val userId: BotUserId,
+    val chatId: ChatId,
+    val text: String
 )
 
 private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButton>> =

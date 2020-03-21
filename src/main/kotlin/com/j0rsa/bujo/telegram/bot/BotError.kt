@@ -1,4 +1,4 @@
-package com.j0rsa.bujo.telegram
+package com.j0rsa.bujo.telegram.bot
 
 sealed class BotError {
 	object NotFound : BotError()

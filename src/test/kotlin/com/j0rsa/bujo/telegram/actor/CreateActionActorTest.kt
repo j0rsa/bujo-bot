@@ -4,9 +4,9 @@ import arrow.core.Either
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import com.j0rsa.bujo.telegram.ActionId
-import com.j0rsa.bujo.telegram.BujoMarkup.createdActionMarkup
-import com.j0rsa.bujo.telegram.Lines
+import com.j0rsa.bujo.telegram.bot.ActionId
+import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
+import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest

@@ -1,9 +1,9 @@
 package com.j0rsa.bujo.telegram.actor
 
-import com.j0rsa.bujo.telegram.BujoLogic
-import com.j0rsa.bujo.telegram.BujoMarkup.periodMarkup
-import com.j0rsa.bujo.telegram.BujoMarkup.valueTypeMarkup
-import com.j0rsa.bujo.telegram.Lines
+import com.j0rsa.bujo.telegram.bot.BujoLogic
+import com.j0rsa.bujo.telegram.bot.Markup.periodMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.valueTypeMarkup
+import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorState
 import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
 import com.j0rsa.bujo.telegram.actor.common.mandatoryStep

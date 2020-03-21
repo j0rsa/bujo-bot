@@ -1,10 +1,12 @@
 package com.j0rsa.bujo.telegram
 
-import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
-import com.j0rsa.bujo.telegram.BujoLogic.ActorCommand.Skip
-import com.j0rsa.bujo.telegram.BujoLogic.addValue
-import com.j0rsa.bujo.telegram.BujoLogic.handleUserActorSayMessage
-import com.j0rsa.bujo.telegram.BujoLogic.handleUserActorSkipMessage
+import com.j0rsa.bujo.telegram.bot.*
+import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
+import com.j0rsa.bujo.telegram.bot.BujoLogic.ActorCommand.Skip
+import com.j0rsa.bujo.telegram.bot.BujoLogic.addValue
+import com.j0rsa.bujo.telegram.bot.BujoLogic.handleUserActorSayMessage
+import com.j0rsa.bujo.telegram.bot.BujoLogic.handleUserActorSkipMessage
+import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.bot
 import me.ivmg.telegram.dispatch
@@ -37,10 +39,17 @@ class App {
 				message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
 				message(Filter.Text and notTextButton()) { _, update ->
                     val message = update.message ?: return@message
-                    val userId = BotUserId(message.from ?: return@message)
+                    val userId =
+						BotUserId(message.from ?: return@message)
                     val text = message.text ?: return@message
 
-					handleUserActorSayMessage(HandleActorMessage(userId, ChatId(message), text))
+					handleUserActorSayMessage(
+						HandleActorMessage(
+							userId,
+							ChatId(message),
+							text
+						)
+					)
                 }
 				callbackQuery(CALLBACK_ADD_VALUE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
@@ -75,14 +84,21 @@ class App {
 		val userId = BotUserId(callbackQuery.from)
 		val data = parse(callbackQuery.data, CALLBACK_ADD_VALUE)
 
-		addValue(CallbackMessage(BujoBot(bot), userId, ChatId(message), data))
+		addValue(CallbackMessage(BujoBot(bot), userId,
+			ChatId(message), data))
 	}
 
 	private fun actorsCallback(callbackQuery: CallbackQuery, message: Message) {
 		val userId = BotUserId(callbackQuery.from)
 		val data = parse(callbackQuery.data, CALLBACK_ACTOR_TEMPLATE)
 
-		handleUserActorSayMessage(HandleActorMessage(userId, ChatId(message), data))
+		handleUserActorSayMessage(
+			HandleActorMessage(
+				userId,
+				ChatId(message),
+				data
+			)
+		)
 	}
 
 //	private fun editActionCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {

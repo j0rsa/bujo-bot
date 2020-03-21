@@ -1,8 +1,9 @@
-package com.j0rsa.bujo.telegram
+package com.j0rsa.bujo.telegram.bot
 
 import com.j0rsa.bujo.telegram.api.model.Action
 import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.ValueType
+import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import me.ivmg.telegram.entities.InlineKeyboardButton
 import me.ivmg.telegram.entities.InlineKeyboardMarkup
 import me.ivmg.telegram.entities.KeyboardButton
@@ -14,8 +15,12 @@ import java.time.LocalDateTime
  * @since 14.03.20
  */
 
-object BujoMarkup {
-    fun permanentMarkup(language: String?) = with(BujoTalk.withLanguage(language)) {
+object Markup {
+    fun permanentMarkup(language: String?) = with(
+        BujoTalk.withLanguage(
+            language
+        )
+    ) {
         KeyboardReplyMarkup(
             listOf(
                 listOf(
@@ -87,7 +92,11 @@ object BujoMarkup {
         )
     )
 
-    fun periodMarkup(language: String): InlineKeyboardMarkup = with(BujoTalk.withLanguage(language)) {
+    fun periodMarkup(language: String): InlineKeyboardMarkup = with(
+        BujoTalk.withLanguage(
+            language
+        )
+    ) {
         InlineKeyboardMarkup(
             listOf(
                 listOf(
@@ -104,7 +113,11 @@ object BujoMarkup {
         )
     }
 
-    private fun noYesMarkup(language: String): InlineKeyboardMarkup = with(BujoTalk.withLanguage(language)) {
+    private fun noYesMarkup(language: String): InlineKeyboardMarkup = with(
+        BujoTalk.withLanguage(
+            language
+        )
+    ) {
         InlineKeyboardMarkup(
             listOf(
                 listOf(

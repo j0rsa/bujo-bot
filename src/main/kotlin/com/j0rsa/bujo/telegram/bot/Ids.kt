@@ -1,4 +1,4 @@
-package com.j0rsa.bujo.telegram
+package com.j0rsa.bujo.telegram.bot
 
 import me.ivmg.telegram.entities.Message
 import me.ivmg.telegram.entities.User

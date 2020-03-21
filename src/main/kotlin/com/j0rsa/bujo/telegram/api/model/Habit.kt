@@ -1,6 +1,6 @@
 package com.j0rsa.bujo.telegram.api.model
 
-import com.j0rsa.bujo.telegram.HabitId
+import com.j0rsa.bujo.telegram.bot.HabitId
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZonedDateTime

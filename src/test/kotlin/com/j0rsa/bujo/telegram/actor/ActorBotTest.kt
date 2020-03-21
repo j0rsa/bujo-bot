@@ -1,9 +1,11 @@
 package com.j0rsa.bujo.telegram.actor
 
-import com.j0rsa.bujo.telegram.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.model.User
 import com.j0rsa.bujo.telegram.api.model.UserId
+import com.j0rsa.bujo.telegram.bot.*
+import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
+import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import com.j0rsa.bujo.telegram.monad.Client
 import com.nhaarman.mockitokotlin2.mock

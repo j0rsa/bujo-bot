@@ -1,4 +1,4 @@
-package com.j0rsa.bujo.telegram
+package com.j0rsa.bujo.telegram.bot
 
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.ParseMode
@@ -26,7 +26,7 @@ interface Bot {
 	)
 }
 
-class BujoBot(private val bot: Bot) : com.j0rsa.bujo.telegram.Bot {
+class BujoBot(private val bot: Bot) : com.j0rsa.bujo.telegram.bot.Bot {
 	override fun sendMessage(
 		chatId: ChatId,
 		text: String,

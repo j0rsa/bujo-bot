@@ -1,9 +1,9 @@
 package com.j0rsa.bujo.telegram.monad
 
 import arrow.core.Either
-import com.j0rsa.bujo.telegram.*
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.*
+import com.j0rsa.bujo.telegram.bot.*
 import kotlinx.coroutines.CoroutineScope
 import org.http4k.core.Status
 
