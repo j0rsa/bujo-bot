@@ -24,7 +24,7 @@ dependencies {
     implementation(Libs.http4kFormat)
     implementation(Libs.config4k)
     // workaround for https://github.com/kotlin-telegram-bot/kotlin-telegram-bot/pull/50
-    implementation("com.squareup.okhttp3:logging-interceptor:4.3.1")
+    implementation("com.squareup.okhttp3:logging-interceptor:3.8.0")
     implementation(Libs.coroutines)
     implementation(Libs.slf4jApi)
     implementation(Libs.logbackClassic)
