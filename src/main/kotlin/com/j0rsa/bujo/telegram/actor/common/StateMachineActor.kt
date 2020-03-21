@@ -45,12 +45,17 @@ open class StateMachineActor<T : ActorState>(
                             } else currentStep
                         }
                         is ActorMessage.Skip -> {
-                            when (currentStep) {
-                                is OptionalStep<*> -> nextStep() ?: return@actor
-                                is MandatoryStep<*> -> {
+                            when {
+                                state.subActor != null -> {
+                                    state.subActor?.send(ActorMessage.Skip)
+                                    currentStep
+                                }
+                                currentStep is OptionalStep<*> -> nextStep() ?: return@actor
+                                currentStep is MandatoryStep<*> -> {
                                     sendLocalizedMessage(state, Lines::stepCannotBeSkippedMessage)
                                     currentStep
                                 }
+                                else -> nextStep() ?: return@actor
                             }
                         }
                     }
@@ -91,7 +96,8 @@ interface Localized {
 
 abstract class ActorState(
     open val ctx: ActorContext,
-    val trackerUser: User = ctx.client.getUser(ctx.userId)
+    val trackerUser: User = ctx.client.getUser(ctx.userId),
+    var subActor: SendChannel<ActorMessage>? = null
 )
 
 sealed class ActorStep<in T : ActorState>(

@@ -4,13 +4,15 @@ import com.j0rsa.bujo.telegram.BujoLogic
 import com.j0rsa.bujo.telegram.BujoMarkup.periodMarkup
 import com.j0rsa.bujo.telegram.BujoMarkup.valueTypeMarkup
 import com.j0rsa.bujo.telegram.Lines
-import com.j0rsa.bujo.telegram.actor.common.*
+import com.j0rsa.bujo.telegram.actor.common.ActorState
+import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
+import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
+import com.j0rsa.bujo.telegram.actor.common.optionalStep
 import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.api.model.ValueTemplate
 import com.j0rsa.bujo.telegram.api.model.ValueType
 import com.j0rsa.bujo.telegram.monad.ActorContext
-import kotlinx.coroutines.channels.SendChannel
 import java.time.LocalDateTime
 
 /**
@@ -27,8 +29,7 @@ data class CreateHabitState(
 	var quote: String? = null,
 	var bad: Boolean? = null,
 	var startFrom: LocalDateTime? = null,
-	val values: MutableList<ValueTemplate> = mutableListOf(),
-	var valuesActor: SendChannel<ActorMessage>? = null
+	val values: MutableList<ValueTemplate> = mutableListOf()
 ) : ActorState(ctx)
 
 object HabitActor : StateMachineActor<CreateHabitState>(
@@ -93,17 +94,17 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 			valueTypeMarkup(state.trackerUser.language)
 		)
 	}, {
-		if (state.valuesActor == null) {
+		if (state.subActor == null) {
 			val superState = state
-			state.valuesActor =
+			state.subActor =
 				ValueTemplateActor().yield(ValueTemplateState(state.ctx, ValueType.valueOf(message.text))) {
 					superState.values.add(
 						ValueTemplate(state.type, state.name)
 					)
-					superState.valuesActor = null
+					superState.subActor = null
 				}
 		} else {
-			BujoLogic.handleSayActorMessage(message.text, state.valuesActor!!)
+			BujoLogic.handleSayActorMessage(message.text, state.subActor!!)
 		}
 		true
 	})
