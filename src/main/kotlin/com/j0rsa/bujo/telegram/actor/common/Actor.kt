@@ -1,6 +1,5 @@
 package com.j0rsa.bujo.telegram.actor.common
 
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.SendChannel
 
 /**
@@ -15,15 +14,7 @@ interface Actor<T: ActorState> {
 	): SendChannel<ActorMessage>
 }
 
-sealed class ActorMessage(private val deferred: CompletableDeferred<Boolean>) {
-	data class Say(val text: String, val d: CompletableDeferred<Boolean> = CompletableDeferred()) : ActorMessage(d)
-	data class Skip(val d: CompletableDeferred<Boolean> = CompletableDeferred()) : ActorMessage(d)
-
-	fun complete() = deferred.complete(true)
-	fun unComplete() = deferred.complete(false)
-}
-
-interface Receiver {
-	fun say(message: ActorMessage.Say): Receiver
-	fun skip(message: ActorMessage.Skip): Receiver
+sealed class ActorMessage {
+	data class Say(val text: String) : ActorMessage()
+	object Skip : ActorMessage()
 }

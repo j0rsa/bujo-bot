@@ -12,8 +12,11 @@ import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
 import com.j0rsa.bujo.telegram.api.model.HabitRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
 import com.j0rsa.bujo.telegram.monad.ActorContext
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.launch
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
 import org.http4k.core.Status
@@ -98,25 +101,17 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
             handleSayActorMessage(
                 message.text.trim(),
                 channel
-            ) {
-                userActors.remove(message.userId)
-            }
+            )
         }
     }
 
     fun handleSayActorMessage(
         message: String,
-        channel: SendChannel<ActorMessage>,
-        done: (() -> Unit)? = null
+        channel: SendChannel<ActorMessage>
     ) {
         launch {
-            val deferredFinished = CompletableDeferred<Boolean>()
             if (!channel.isClosedForSend) {
-                channel.send(ActorMessage.Say(message, deferredFinished))
-                if (deferredFinished.await()) {
-                    channel.close()
-                    done?.invoke()
-                }
+                channel.send(ActorMessage.Say(message))
             }
         }
     }
@@ -127,14 +122,9 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 launch {
                     val userId = BotUserId(user)
                     userActors[userId]?.let { actorChannel ->
-                        val deferredFinished = CompletableDeferred<Boolean>()
                         if (!actorChannel.isClosedForSend) {
                             when (command) {
-                                is ActorCommand.Skip -> actorChannel.send(ActorMessage.Skip(deferredFinished))
-                            }
-                            if (deferredFinished.await()) {
-                                actorChannel.close()
-                                userActors.remove(userId)
+                                is ActorCommand.Skip -> actorChannel.send(ActorMessage.Skip)
                             }
                         }
                     }
@@ -187,14 +177,14 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
             CreateActionState(ctx)
         ) {
             cause ?: with(state) {
-                ctx.client.createAction(user.id, ActionRequest(actionDescription, tags)).fold(
+                ctx.client.createAction(trackerUser.id, ActionRequest(actionDescription, tags)).fold(
                     {
                         !sendLocalizedMessage(state, Lines::actionNotRegisteredMessage)
                     },
                     { actionId ->
                         sendLocalizedMessage(
                             state, Lines::actionRegisteredMessage,
-                            createdActionMarkup(state.user.language, actionId)
+                            createdActionMarkup(state.trackerUser.language, actionId)
                         )
                     })
             }
@@ -233,13 +223,13 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
-    fun createHabit(bot: Bot, update: Update) = initNewActor(bot, update) { _, _, ctx ->
+    fun createHabit(bot: Bot, update: Update) = initNewActor(bot, update) { user, _, ctx ->
         HabitActor.yield(
             CreateHabitState(ctx)
         ) {
             cause ?: with(state) {
                 val habitRequest = HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
-                ctx.client.createHabit(user.id, habitRequest).fold(
+                ctx.client.createHabit(trackerUser.id, habitRequest).fold(
                     {
                         !sendLocalizedMessage(this, Lines::habitNotRegisteredMessage)
                     },
@@ -247,9 +237,10 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                         sendLocalizedMessage(
                             this,
                             Lines::habitRegisteredMessage,
-                            habitCreatedMarkup(user.language, habitId)
+                            habitCreatedMarkup(trackerUser.language, habitId)
                         )
                     })
+                userActors.remove(BotUserId(user))
             }
         }
     }
@@ -276,15 +267,9 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
 //	fun editAction(message: CallbackMessage) {
 //		launch {
-//			val deferredFinished = CompletableDeferred<Boolean>()
-//			val actorMessage = ActorMessage.Say(message.callBackData, deferredFinished)
+//			val actorMessage = ActorMessage.Say(message.callBackData)
 //			userActors[message.userId]?.close()
 //			val channel = EditActionActor.yield(actorMessage, message.toContext(this))
-//			if (deferredFinished.await()) {
-//				channel.close()
-//			} else {
-//				userActors[message.userId] = channel
-//			}
 //		}
 //	}
 

@@ -14,7 +14,6 @@ import com.j0rsa.bujo.telegram.monad.Client
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
@@ -31,12 +30,11 @@ class CreateActionActorTest : ActorBotTest() {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = deferred()
 
 		val state = CreateActionState(actorContext(client))
 		val actorChannel = CreateActionActor.yield(state)
 		actorChannel.send(sayDescription())
-		actorChannel.send(sayTags(deferredFinished))
+		actorChannel.send(sayTags())
 
 		verify(client).getUser(userId)
 		verify(client).createAction(user.id, defaultActionRequest())
@@ -47,8 +45,7 @@ class CreateActionActorTest : ActorBotTest() {
 			getLocalizedMessage(Lines::actionRegisteredMessage),
 			replyMarkup = createdActionMarkup("en", actionId)
 		)
-		assertThat(deferredFinished.await()).isTrue()
-		actorChannel.close()
+		assertThat(actorChannel.isClosedForSend).isTrue()
 	}
 
 	@Test
@@ -56,14 +53,12 @@ class CreateActionActorTest : ActorBotTest() {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
 		}
-		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(CreateActionState(actorContext(client)))
-		actorChannel.send(ActorMessage.Skip(deferredFinished))
+		actorChannel.send(ActorMessage.Skip)
 
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
-		assertThat(deferredFinished.await()).isFalse()
-		actorChannel.close()
+		assertThat(actorChannel.isClosedForSend).isFalse()
 	}
 
 	@Test
@@ -72,22 +67,20 @@ class CreateActionActorTest : ActorBotTest() {
 			on { getUser(userId) } doReturn user
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = deferred()
 
 		val actorChannel = CreateActionActor.yield(CreateActionState(actorContext(client)))
 		actorChannel.send(sayDescription())
-		actorChannel.send(ActorMessage.Skip(deferredFinished))
+		actorChannel.send(ActorMessage.Skip)
 
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
-		assertThat(deferredFinished.await()).isFalse()
-		actorChannel.close()
+		assertThat(actorChannel.isClosedForSend).isFalse()
 	}
 
-	private fun sayTags(deferredFinished: CompletableDeferred<Boolean> = deferred()) =
-		ActorMessage.Say(tagsText, deferredFinished)
+	private fun sayTags() =
+		ActorMessage.Say(tagsText)
 
-	private fun sayDescription(deferredFinished: CompletableDeferred<Boolean> = deferred()) =
-		ActorMessage.Say(description, deferredFinished)
+	private fun sayDescription() =
+		ActorMessage.Say(description)
 
 	private fun defaultActionRequest(
 		description: String = "description"

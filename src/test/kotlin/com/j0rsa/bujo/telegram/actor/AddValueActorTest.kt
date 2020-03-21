@@ -15,7 +15,6 @@ import com.j0rsa.bujo.telegram.monad.Client
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
@@ -33,12 +32,11 @@ internal class AddValueActorTest : ActorBotTest() {
 			on { getUser(userId) } doReturn user
 			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = deferred()
 
 		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
 		actorChannel.send(sayType())
 		actorChannel.send(sayName())
-		actorChannel.send(sayValue(deferredFinished))
+		actorChannel.send(sayValue())
 
 		verify(client).getUser(userId)
 		verify(bot).sendMessage(
@@ -53,8 +51,7 @@ internal class AddValueActorTest : ActorBotTest() {
 			replyMarkup = defaultValueMarkup()
 		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
-		assertThat(deferredFinished.await()).isTrue()
-		actorChannel.close()
+		assertThat(actorChannel.isClosedForSend).isTrue()
 	}
 
 	@Test
@@ -62,10 +59,9 @@ internal class AddValueActorTest : ActorBotTest() {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user
 		}
-		val deferredFinished = deferred()
 
 		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
-		actorChannel.send(skip(deferredFinished))
+		actorChannel.send(skip())
 
 		verify(bot).sendMessage(
 			chatId,
@@ -73,9 +69,7 @@ internal class AddValueActorTest : ActorBotTest() {
 			replyMarkup = valueTypeMarkup("en")
 		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
-
-		assertThat(deferredFinished.await()).isFalse()
-		actorChannel.close()
+		assertThat(actorChannel.isClosedForSend).isFalse()
 	}
 
 	@Test
@@ -84,13 +78,12 @@ internal class AddValueActorTest : ActorBotTest() {
 			on { getUser(userId) } doReturn user
 			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = deferred()
 
 		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
 		actorChannel.send(sayType())
 		actorChannel.send(sayName())
 		actorChannel.send(skip())
-		actorChannel.send(sayValue(deferredFinished))
+		actorChannel.send(sayValue())
 
 		verify(client).getUser(userId)
 		verify(client).addValue(user.id, actionId, defaultValue())
@@ -107,9 +100,7 @@ internal class AddValueActorTest : ActorBotTest() {
 		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
-
-		assertThat(deferredFinished.await()).isTrue()
-		actorChannel.close()
+		assertThat(actorChannel.isClosedForSend).isTrue()
 	}
 
 	@Test
@@ -118,12 +109,11 @@ internal class AddValueActorTest : ActorBotTest() {
 			on { getUser(userId) } doReturn user
 			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
-		val deferredFinished = deferred()
 
 		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
 		actorChannel.send(sayType())
 		actorChannel.send(skip())
-		actorChannel.send(sayValue(deferredFinished))
+		actorChannel.send(sayValue())
 
 		verify(client).getUser(userId)
 		verify(bot).sendMessage(
@@ -139,18 +129,12 @@ internal class AddValueActorTest : ActorBotTest() {
 		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
 		verify(client).addValue(user.id, actionId, defaultValue())
-		assertThat(deferredFinished.await()).isTrue()
-		actorChannel.close()
+		assertThat(actorChannel.isClosedForSend).isTrue()
 	}
 
-	private fun sayType(deferredFinished: CompletableDeferred<Boolean> = deferred()) =
-		ActorMessage.Say(defaultType.name, deferredFinished)
-
-	private fun sayName(deferredFinished: CompletableDeferred<Boolean> = deferred()) =
-		ActorMessage.Say("Mood", deferredFinished)
-
-	private fun sayValue(deferredFinished: CompletableDeferred<Boolean> = deferred()) =
-		ActorMessage.Say("5", deferredFinished)
+	private fun sayType() = ActorMessage.Say(defaultType.name)
+	private fun sayName() = ActorMessage.Say("Mood")
+	private fun sayValue() = ActorMessage.Say("5")
 
 	private fun defaultValueMarkup() = valueMarkup(defaultType)
 	private fun defaultValue(type: ValueType = defaultType, name: String = defaultName) =

@@ -22,7 +22,7 @@ data class AddValueState(
 
 object AddValueActor : StateMachineActor<AddValueState>(
 	mandatoryStep({
-		sendLocalizedMessage(state, Lines::addActionValueInitMessage, valueTypeMarkup(state.user.language))
+		sendLocalizedMessage(state, Lines::addActionValueInitMessage, valueTypeMarkup(state.trackerUser.language))
 	}, {
 		try {
 			state.type = ValueType.valueOf(message.text)
@@ -43,7 +43,7 @@ object AddValueActor : StateMachineActor<AddValueState>(
 	}, {
 		state.value = message.text
 		with(state) {
-			ctx.client.addValue(user.id, actionId, Value(type, value, name)).fold(
+			ctx.client.addValue(trackerUser.id, actionId, Value(type, value, name)).fold(
 				{
 					!sendLocalizedMessage(state, Lines::addActionValueNotRegistered)
 				},

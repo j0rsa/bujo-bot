@@ -29,12 +29,10 @@ open class StateMachineActor<T : ActorState>(
         with(state.ctx.scope) {
             actor(onCompletion = { cause -> onCompletionHandler?.let { it(StateWithLocalization(state, cause)) } }) {
                 val iterator = steps.iterator()
-                fun nextStep(message: ActorMessage? = null): ActorStep<T>? =
+                fun nextStep(): ActorStep<T>? =
                     if (iterator.hasNext()) {
-                        message?.unComplete()
                         iterator.next().apply { init(state) }
                     } else {
-                        message?.complete()
                         null
                     }
 
@@ -43,15 +41,14 @@ open class StateMachineActor<T : ActorState>(
                     currentStep = when (message) {
                         is ActorMessage.Say -> {
                             if (currentStep(state, message)) {
-                                nextStep(message) ?: return@actor
+                                nextStep() ?: return@actor
                             } else currentStep
                         }
                         is ActorMessage.Skip -> {
                             when (currentStep) {
-                                is OptionalStep<*> -> nextStep(message) ?: return@actor
+                                is OptionalStep<*> -> nextStep() ?: return@actor
                                 is MandatoryStep<*> -> {
                                     sendLocalizedMessage(state, Lines::stepCannotBeSkippedMessage)
-                                    message.unComplete()
                                     currentStep
                                 }
                             }
@@ -73,7 +70,7 @@ interface Localized {
         with(state) {
             ctx.bot.sendMessage(
                 chatId = ctx.chatId,
-                text = line.get(BujoTalk.withLanguage(user.language)),
+                text = line.get(BujoTalk.withLanguage(trackerUser.language)),
                 replyMarkup = replyMarkup
             ).let { true }
         }
@@ -86,7 +83,7 @@ interface Localized {
         with(state) {
             ctx.bot.sendMessage(
                 chatId = ctx.chatId,
-                text = lines.joinToString(separator = "\n") { it.get(BujoTalk.withLanguage(user.language)) },
+                text = lines.joinToString(separator = "\n") { it.get(BujoTalk.withLanguage(trackerUser.language)) },
                 replyMarkup = replyMarkup
             ).let { true }
         }
@@ -94,7 +91,7 @@ interface Localized {
 
 abstract class ActorState(
     open val ctx: ActorContext,
-    val user: User = ctx.client.getUser(ctx.userId)
+    val trackerUser: User = ctx.client.getUser(ctx.userId)
 )
 
 sealed class ActorStep<in T : ActorState>(

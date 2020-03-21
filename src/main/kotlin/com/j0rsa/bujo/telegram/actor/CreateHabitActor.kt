@@ -8,6 +8,7 @@ import com.j0rsa.bujo.telegram.actor.common.*
 import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.api.model.ValueTemplate
+import com.j0rsa.bujo.telegram.api.model.ValueType
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.channels.SendChannel
 import java.time.LocalDateTime
@@ -44,7 +45,7 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 		true
 	}),
 	mandatoryStep({
-		sendLocalizedMessage(state, Lines::createHabitPeriodMessage, periodMarkup(state.user.language))
+		sendLocalizedMessage(state, Lines::createHabitPeriodMessage, periodMarkup(state.trackerUser.language))
 	}, {
 		when (val period = Period.values().find { it.name == message.text }) {
 			null -> {
@@ -54,7 +55,7 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 						Lines::badInputMessage,
 						Lines::createHabitPeriodMessage
 					),
-					periodMarkup(state.user.language)
+					periodMarkup(state.trackerUser.language)
 				)
 			}
 			else -> {
@@ -89,16 +90,18 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 		sendLocalizedMessage(
 			state,
 			listOf(Lines::doYouWantToAddValueMessage, Lines::orTapSkipMessage),
-			valueTypeMarkup(state.user.language)
+			valueTypeMarkup(state.trackerUser.language)
 		)
 	}, {
 		if (state.valuesActor == null) {
-			val values = state.values
-			state.valuesActor = ValueTemplateActor().yield(ValueTemplateState(state.ctx)) {
-				values.add(
-					ValueTemplate(state.type ?: return@`yield`, state.name)
-				)
-			}
+			val superState = state
+			state.valuesActor =
+				ValueTemplateActor().yield(ValueTemplateState(state.ctx, ValueType.valueOf(message.text))) {
+					superState.values.add(
+						ValueTemplate(state.type, state.name)
+					)
+					superState.valuesActor = null
+				}
 		} else {
 			BujoLogic.handleSayActorMessage(message.text, state.valuesActor!!)
 		}
