@@ -1,10 +1,6 @@
 package com.j0rsa.bujo.telegram.bot
 
-import com.j0rsa.bujo.telegram.*
-import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
-import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
-import com.j0rsa.bujo.telegram.bot.Markup.habitCreatedMarkup
-import com.j0rsa.bujo.telegram.bot.Markup.permanentMarkup
+import com.j0rsa.bujo.telegram.Config
 import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.TrackerClient
@@ -12,6 +8,10 @@ import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
 import com.j0rsa.bujo.telegram.api.model.HabitRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
+import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
+import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.habitCreatedMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.permanentMarkup
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import com.j0rsa.bujo.telegram.bot.i18n.Language
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
@@ -103,10 +103,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         message: HandleActorMessage
     ) {
         userActors[message.userId]?.let { channel ->
-            handleSayActorMessage(
-                message.text.trim(),
-                channel
-            )
+            handleSayActorMessage(message.text.trim(), channel)
         }
     }
 
@@ -121,25 +118,19 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
-    fun handleUserActorSkipMessage(update: Update, command: ActorCommand) {
+    fun handleUserActorSkipMessage(update: Update) {
         update.message?.let { message ->
             message.from?.let { user ->
                 launch {
                     val userId = BotUserId(user)
                     userActors[userId]?.let { actorChannel ->
                         if (!actorChannel.isClosedForSend) {
-                            when (command) {
-                                is ActorCommand.Skip -> actorChannel.send(ActorMessage.Skip)
-                            }
+                            actorChannel.send(ActorMessage.Skip)
                         }
                     }
                 }
             }
         }
-    }
-
-    sealed class ActorCommand {
-        object Skip : ActorCommand()
     }
 
     fun showHabits(bot: Bot, update: Update) {

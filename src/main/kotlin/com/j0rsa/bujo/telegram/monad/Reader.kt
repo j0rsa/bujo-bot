@@ -31,7 +31,7 @@ class Reader<D, out A>(val run: (D) -> A) {
 data class ActorContext(
 	val chatId: ChatId,
 	val userId: BotUserId,
-	val bot: Bot,
+	val bot: TelegramBot,
 	val scope: CoroutineScope,
 	val client: Client = TrackerClient
 )

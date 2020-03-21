@@ -3,7 +3,9 @@ package com.j0rsa.bujo.telegram.actor
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.model.User
 import com.j0rsa.bujo.telegram.api.model.UserId
-import com.j0rsa.bujo.telegram.bot.*
+import com.j0rsa.bujo.telegram.bot.BotUserId
+import com.j0rsa.bujo.telegram.bot.ChatId
+import com.j0rsa.bujo.telegram.bot.TelegramBot
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.monad.ActorContext
@@ -21,7 +23,7 @@ import kotlin.reflect.KProperty1
 open class ActorBotTest {
     protected val chatId = ChatId(10L)
     protected val userId = BotUserId(1L)
-    protected val bot = mock<Bot>()
+    protected val bot = mock<TelegramBot>()
     protected val user = User(UserId.randomValue(), 1L)
 
     @OptIn(ExperimentalCoroutinesApi::class)

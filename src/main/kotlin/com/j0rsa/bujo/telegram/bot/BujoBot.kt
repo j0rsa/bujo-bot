@@ -4,7 +4,7 @@ import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.ParseMode
 import me.ivmg.telegram.entities.ReplyMarkup
 
-interface Bot {
+interface TelegramBot {
 	fun sendMessage(
 		chatId: ChatId,
 		text: String,
@@ -26,7 +26,7 @@ interface Bot {
 	)
 }
 
-class BujoBot(private val bot: Bot) : com.j0rsa.bujo.telegram.bot.Bot {
+class BujoBot(private val bot: Bot) : TelegramBot {
 	override fun sendMessage(
 		chatId: ChatId,
 		text: String,

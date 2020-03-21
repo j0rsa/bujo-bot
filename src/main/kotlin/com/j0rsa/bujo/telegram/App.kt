@@ -2,7 +2,6 @@ package com.j0rsa.bujo.telegram
 
 import com.j0rsa.bujo.telegram.bot.*
 import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
-import com.j0rsa.bujo.telegram.bot.BujoLogic.ActorCommand.Skip
 import com.j0rsa.bujo.telegram.bot.BujoLogic.addValue
 import com.j0rsa.bujo.telegram.bot.BujoLogic.handleUserActorSayMessage
 import com.j0rsa.bujo.telegram.bot.BujoLogic.handleUserActorSkipMessage
@@ -31,24 +30,20 @@ class App {
 			dispatch {
 				command("start") { bot, update -> BujoLogic.registerTelegramUser(bot, update) }
 				command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
-				command("skip") { _, update -> handleUserActorSkipMessage(update, Skip) }
+				command("skip") { _, update -> handleUserActorSkipMessage(update) }
 				message(CreateHabitButtonFilter) { bot, update -> BujoLogic.createHabit(bot, update) }
 				callbackQuery(CALLBACK_CREATE_HABIT_BUTTON) { bot, update -> BujoLogic.createHabit(bot, update) }
 				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
 				message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
 				message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
 				message(Filter.Text and notTextButton()) { _, update ->
-                    val message = update.message ?: return@message
-                    val userId =
+					val message = update.message ?: return@message
+					val userId =
 						BotUserId(message.from ?: return@message)
-                    val text = message.text ?: return@message
+					val text = message.text ?: return@message
 
 					handleUserActorSayMessage(
-						HandleActorMessage(
-							userId,
-							ChatId(message),
-							text
-						)
+						HandleActorMessage(userId, ChatId(message), text)
 					)
                 }
 				callbackQuery(CALLBACK_ADD_VALUE) { bot, update ->
@@ -80,27 +75,6 @@ class App {
 		bot.startPolling()
 	}
 
-	private fun addValueCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
-		val userId = BotUserId(callbackQuery.from)
-		val data = parse(callbackQuery.data, CALLBACK_ADD_VALUE)
-
-		addValue(CallbackMessage(BujoBot(bot), userId,
-			ChatId(message), data))
-	}
-
-	private fun actorsCallback(callbackQuery: CallbackQuery, message: Message) {
-		val userId = BotUserId(callbackQuery.from)
-		val data = parse(callbackQuery.data, CALLBACK_ACTOR_TEMPLATE)
-
-		handleUserActorSayMessage(
-			HandleActorMessage(
-				userId,
-				ChatId(message),
-				data
-			)
-		)
-	}
-
 //	private fun editActionCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
 //		val userId = BotUserId(callbackQuery.from)
 //		val data = parse(callbackQuery.data, CALLBACK_VIEW_ACTION)
@@ -108,25 +82,50 @@ class App {
 //		BujoLogic.editAction(CallbackMessage(BujoBot(bot), userId, ChatId(message), data))
 //	}
 
-	private fun deleteMessage(bot: Bot, message: Message) {
-		bot.deleteMessage(message.chat.id, message.messageId)
-	}
-
 	companion object {
 		@JvmStatic
 		fun main(args: Array<String>) {
 			App().run()
-        }
+		}
 
-        private fun notTextButton() =
-            listOf(
-                ShowHabitsButtonFilter,
-                CreateHabitButtonFilter,
-                CreateActionButtonFilter,
-                SettingsButtonFilter
-            ).fold(Filter.All as Filter, { acc, filter -> acc and filter.not() })
+		private fun actorsCallback(callbackQuery: CallbackQuery, message: Message) {
+			val userId = BotUserId(callbackQuery.from)
+			val data = parse(callbackQuery.data, CALLBACK_ACTOR_TEMPLATE)
 
-        object CreateHabitButtonFilter : Filter {
+			handleUserActorSayMessage(
+				HandleActorMessage(
+					userId,
+					ChatId(message),
+					data
+				)
+			)
+		}
+
+		private fun deleteMessage(bot: Bot, message: Message) {
+			bot.deleteMessage(message.chat.id, message.messageId)
+		}
+
+		private fun addValueCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
+			val userId = BotUserId(callbackQuery.from)
+			val data = parse(callbackQuery.data, CALLBACK_ADD_VALUE)
+
+			addValue(
+				CallbackMessage(
+					BujoBot(bot), userId,
+					ChatId(message), data
+				)
+			)
+		}
+
+		private fun notTextButton() =
+			listOf(
+				ShowHabitsButtonFilter,
+				CreateHabitButtonFilter,
+				CreateActionButtonFilter,
+				SettingsButtonFilter
+			).fold(Filter.All as Filter, { acc, filter -> acc and filter.not() })
+
+		object CreateHabitButtonFilter : Filter {
             override fun Message.predicate(): Boolean =
                 text == BujoTalk.withLanguage(from?.languageCode).createHabitButton
         }
