@@ -74,7 +74,8 @@ data class Lines(
     val doYouWantToAddValueMessage: String,
     val yesButton: String,
     val noButton: String,
-    val noHabitsRegistered: String
+    val noHabitsRegistered: String,
+    val valueAddedMessage: String
 )
 
 enum class Language{

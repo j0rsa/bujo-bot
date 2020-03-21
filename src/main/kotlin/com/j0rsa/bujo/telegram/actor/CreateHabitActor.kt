@@ -96,16 +96,25 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 	}, {
 		if (state.subActor == null) {
 			val superState = state
-			state.subActor =
-				ValueTemplateActor().yield(ValueTemplateState(state.ctx, ValueType.valueOf(message.text))) {
+			state.subActor = ValueTemplateActor()
+				.yield(ValueTemplateState(state.ctx, ValueType.valueOf(message.text))) {
 					superState.values.add(
 						ValueTemplate(state.type, state.name)
 					)
 					superState.subActor = null
+					sendLocalizedMessage(
+						state,
+						listOf(
+							Lines::valueAddedMessage,
+							Lines::doYouWantToAddValueMessage,
+							Lines::orTapSkipMessage
+						),
+						valueTypeMarkup(state.trackerUser.language)
+					)
 				}
 		} else {
 			BujoLogic.handleSayActorMessage(message.text, state.subActor!!)
 		}
-		true
+		false
 	})
 )
