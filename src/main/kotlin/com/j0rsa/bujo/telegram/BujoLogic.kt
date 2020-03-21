@@ -1,11 +1,15 @@
 package com.j0rsa.bujo.telegram
 
 import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
+import com.j0rsa.bujo.telegram.BujoMarkup.createdActionMarkup
+import com.j0rsa.bujo.telegram.BujoMarkup.habitCreatedMarkup
 import com.j0rsa.bujo.telegram.BujoMarkup.permanentMarkup
 import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.TrackerClient
+import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
+import com.j0rsa.bujo.telegram.api.model.HabitRequest
 import com.j0rsa.bujo.telegram.api.model.HabitsInfo
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.*
@@ -73,73 +77,107 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 						language = it.languageCode ?: Config.app.defaultLanguage.toLowerCase()
 					)
 				)
-				val text = when (status) {
+                val text = when (status) {
                     Status.CREATED -> BujoTalk.withLanguage(it.languageCode).welcome
                     Status.OK -> BujoTalk.withLanguage(it.languageCode).welcomeBack
                     else -> BujoTalk.withLanguage(it.languageCode).genericError
                 }
-				bot.sendMessage(
+                bot.sendMessage(
                     message.chat.id,
                     text,
                     replyMarkup = permanentMarkup(message.from?.languageCode)
                 )
-			}
-		}
-	}
+            }
+        }
+    }
 
-	fun handleActorMessage(message: HandleActorMessage) {
-		launch {
-			userActors[message.userId]?.let { actorChannel ->
-				val deferredFinished = CompletableDeferred<Boolean>()
-				if (!actorChannel.isClosedForSend) {
-					actorChannel.send(ActorMessage.Say(message.text.trim(), deferredFinished))
-					if (deferredFinished.await()) {
-						actorChannel.close()
-						userActors.remove(message.userId)
-					}
-				}
-			}
-		}
-	}
+    fun handleUserActorSayMessage(
+        message: HandleActorMessage
+    ) {
+        userActors[message.userId]?.let { channel ->
+            handleSayActorMessage(
+                message.text.trim(),
+                channel
+            ) {
+                userActors.remove(message.userId)
+            }
+        }
+    }
 
-	fun handleActorMessage(update: Update, command: ActorCommand) {
-		update.message?.let { message ->
-			message.from?.let { user ->
-				launch {
-					val userId = BotUserId(user)
-					userActors[userId]?.let { actorChannel ->
-						val deferredFinished = CompletableDeferred<Boolean>()
-						if (!actorChannel.isClosedForSend) {
-							when (command) {
-								is ActorCommand.Skip -> actorChannel.send(ActorMessage.Skip(deferredFinished))
-							}
-							if (deferredFinished.await()) {
-								actorChannel.close()
-								userActors.remove(userId)
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+    fun handleSayActorMessage(
+        message: String,
+        channel: SendChannel<ActorMessage>,
+        done: (() -> Unit)? = null
+    ) {
+        launch {
+            val deferredFinished = CompletableDeferred<Boolean>()
+            if (!channel.isClosedForSend) {
+                channel.send(ActorMessage.Say(message, deferredFinished))
+                if (deferredFinished.await()) {
+                    channel.close()
+                    done?.invoke()
+                }
+            }
+        }
+    }
 
-	sealed class ActorCommand {
-		object Skip : ActorCommand()
-	}
+    fun handleUserActorSkipMessage(update: Update, command: ActorCommand) {
+        update.message?.let { message ->
+            message.from?.let { user ->
+                launch {
+                    val userId = BotUserId(user)
+                    userActors[userId]?.let { actorChannel ->
+                        val deferredFinished = CompletableDeferred<Boolean>()
+                        if (!actorChannel.isClosedForSend) {
+                            when (command) {
+                                is ActorCommand.Skip -> actorChannel.send(ActorMessage.Skip(deferredFinished))
+                            }
+                            if (deferredFinished.await()) {
+                                actorChannel.close()
+                                userActors.remove(userId)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-	fun showHabits(bot: Bot, update: Update) {
-		update.message?.let { message ->
-			message.from?.let { user ->
-				val trackerUser = TrackerClient.getUser(BotUserId(user.id))
-				val habits = TrackerClient.getHabits(trackerUser.id)
-				bot.sendMessage(
-                    message.chat.id,
-                    text = BujoTalk.withLanguage(user.languageCode).showHabitsMessage,
-                    replyMarkup = InlineKeyboardMarkup(
-                        habits.toHabitsInlineKeys()
-                    )
-                )
+    sealed class ActorCommand {
+        object Skip : ActorCommand()
+    }
+
+    fun showHabits(bot: Bot, update: Update) {
+        update.message?.let { message ->
+            message.from?.let { user ->
+                val trackerUser = TrackerClient.getUser(BotUserId(user.id))
+                val habits = TrackerClient.getHabits(trackerUser.id)
+                with(BujoTalk.withLanguage(user.languageCode)) {
+                    if (habits.isEmpty()) {
+                        bot.sendMessage(
+                            message.chat.id,
+                            text = noHabitsRegistered,
+                            replyMarkup = InlineKeyboardMarkup(
+                                listOf(
+                                    listOf(
+                                        InlineKeyboardButton(
+                                            createHabitButton,
+                                            callbackData = CALLBACK_CREATE_HABIT_BUTTON
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    } else {
+                        bot.sendMessage(
+                            message.chat.id,
+                            text = showHabitsMessage,
+                            replyMarkup = InlineKeyboardMarkup(
+                                habits.toHabitsInlineKeys()
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -147,7 +185,20 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     fun createAction(bot: Bot, update: Update) = initNewActor(bot, update) { _, _, ctx ->
         CreateActionActor.yield(
             CreateActionState(ctx)
-        )
+        ) {
+            cause ?: with(state) {
+                ctx.client.createAction(user.id, ActionRequest(actionDescription, tags)).fold(
+                    {
+                        !sendLocalizedMessage(state, Lines::actionNotRegisteredMessage)
+                    },
+                    { actionId ->
+                        sendLocalizedMessage(
+                            state, Lines::actionRegisteredMessage,
+                            createdActionMarkup(state.user.language, actionId)
+                        )
+                    })
+            }
+        }
     }
 
     fun addValue(message: CallbackMessage) {
@@ -185,7 +236,22 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     fun createHabit(bot: Bot, update: Update) = initNewActor(bot, update) { _, _, ctx ->
         HabitActor.yield(
             CreateHabitState(ctx)
-        )
+        ) {
+            cause ?: with(state) {
+                val habitRequest = HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
+                ctx.client.createHabit(user.id, habitRequest).fold(
+                    {
+                        !sendLocalizedMessage(this, Lines::habitNotRegisteredMessage)
+                    },
+                    { habitId ->
+                        sendLocalizedMessage(
+                            this,
+                            Lines::habitRegisteredMessage,
+                            habitCreatedMarkup(user.language, habitId)
+                        )
+                    })
+            }
+        }
     }
 
     private fun initNewActor(
@@ -193,8 +259,8 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         update: Update,
         init: (user: User, message: Message, ctx: ActorContext) -> SendChannel<ActorMessage>
     ) {
-        update.message?.let { message ->
-            message.from?.let { user: User ->
+        (update.message ?: update.callbackQuery?.message)?.let { message ->
+            (update.callbackQuery?.from ?: message.from)?.let { user: User ->
                 launch {
                     val userId = BotUserId(user)
                     userActors[userId]?.close()
@@ -247,12 +313,12 @@ class HandleActorMessage(
 
 private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButton>> =
 	this.map { habitsInfo ->
-		val streakCaption = if (habitsInfo.currentStreak > BigDecimal.ONE) "strike: ${habitsInfo.currentStreak}" else ""
-		val habitCaption = "${habitsInfo.habit.name}  $streakCaption"
-		listOf(
-			InlineKeyboardButton("🔲" or "☑️"),
-			InlineKeyboardButton(habitCaption)
-		)
-	}
+        val streakCaption = if (habitsInfo.currentStreak > BigDecimal.ONE) " 🎯: ${habitsInfo.currentStreak}" else ""
+        val habitCaption = "${habitsInfo.habit.name}$streakCaption"
+        listOf(
+            InlineKeyboardButton("◻️" or "✅️", callbackData = "asd"),
+            InlineKeyboardButton(habitCaption, callbackData = "dsa")
+        )
+    }
 
 private infix fun String.or(other: String) = if (Math.random() < 0.5) this else other

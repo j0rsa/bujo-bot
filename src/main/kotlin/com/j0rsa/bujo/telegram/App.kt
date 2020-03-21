@@ -3,7 +3,8 @@ package com.j0rsa.bujo.telegram
 import com.j0rsa.bujo.telegram.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.BujoLogic.ActorCommand.Skip
 import com.j0rsa.bujo.telegram.BujoLogic.addValue
-import com.j0rsa.bujo.telegram.BujoLogic.handleActorMessage
+import com.j0rsa.bujo.telegram.BujoLogic.handleUserActorSayMessage
+import com.j0rsa.bujo.telegram.BujoLogic.handleUserActorSkipMessage
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.bot
 import me.ivmg.telegram.dispatch
@@ -24,21 +25,22 @@ class App {
 	fun run() {
 		val bot = bot {
 			token = Config.app.token
-			logLevel = HttpLoggingInterceptor.Level.NONE
+			logLevel = HttpLoggingInterceptor.Level.valueOf(Config.app.sdkLoggingLevel)
 			dispatch {
 				command("start") { bot, update -> BujoLogic.registerTelegramUser(bot, update) }
-                command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
-                command("skip") { _, update -> handleActorMessage(update, Skip) }
-                message(CreateHabitButtonFilter) { bot, update -> BujoLogic.createHabit(bot, update) }
-                message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
-                message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
-                message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
-                message(Filter.Text and notTextButton()) { _, update ->
+				command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
+				command("skip") { _, update -> handleUserActorSkipMessage(update, Skip) }
+				message(CreateHabitButtonFilter) { bot, update -> BujoLogic.createHabit(bot, update) }
+				callbackQuery(CALLBACK_CREATE_HABIT_BUTTON) { bot, update -> BujoLogic.createHabit(bot, update) }
+				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
+				message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
+				message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
+				message(Filter.Text and notTextButton()) { _, update ->
                     val message = update.message ?: return@message
                     val userId = BotUserId(message.from ?: return@message)
                     val text = message.text ?: return@message
 
-                    handleActorMessage(HandleActorMessage(userId, ChatId(message), text))
+					handleUserActorSayMessage(HandleActorMessage(userId, ChatId(message), text))
                 }
 				callbackQuery(CALLBACK_ADD_VALUE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
@@ -80,7 +82,7 @@ class App {
 		val userId = BotUserId(callbackQuery.from)
 		val data = parse(callbackQuery.data, CALLBACK_ACTOR_TEMPLATE)
 
-		handleActorMessage(HandleActorMessage(userId, ChatId(message), data))
+		handleUserActorSayMessage(HandleActorMessage(userId, ChatId(message), data))
 	}
 
 //	private fun editActionCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {

@@ -16,7 +16,8 @@ data class AppConfig(
     val token: String,
     val tracker: Tracker,
     val defaultLanguage: String,
-    val httpLoggingLevel: String
+    val httpLoggingLevel: String,
+    val sdkLoggingLevel: String
 )
 
 data class Tracker(

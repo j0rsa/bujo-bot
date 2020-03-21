@@ -15,7 +15,7 @@ import com.j0rsa.bujo.telegram.monad.ActorContext
 
 data class ValueTemplateState(
     override val ctx: ActorContext,
-    var type: ValueType,
+    var type: ValueType? = null,
     var name: String? = null
 ) : ActorState(ctx)
 

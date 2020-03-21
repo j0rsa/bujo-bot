@@ -3,6 +3,7 @@ package com.j0rsa.bujo.telegram.api.model
 import com.j0rsa.bujo.telegram.HabitId
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.ZonedDateTime
 
 /**
  * @author red
@@ -21,13 +22,13 @@ data class HabitRequest(
 )
 
 data class Habit(
-    val name: String,
-    val tags: List<Tag>,
-    val numberOfRepetitions: Int,
-    val period: Period,
-    val quote: String?,
-    val bad: Boolean?,
-    val startFrom: LocalDateTime?,
+    val name: String = "",
+    val tags: List<Tag> = emptyList(),
+    val numberOfRepetitions: Int = 0,
+    val period: Period = Period.Day,
+    val quote: String? = null,
+    val bad: Boolean? = false,
+    val startFrom: ZonedDateTime? = null,
     val id: HabitId? = null
 )
 

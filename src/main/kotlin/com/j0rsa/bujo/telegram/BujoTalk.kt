@@ -48,7 +48,6 @@ data class Lines(
     val actionCreationDescriptionInput: String,
     val actionCreationTagsInput: String,
     val actionCreationInitMessage: String,
-    val terminatorStepMessage: String,
     val addActionValueInitMessage: String,
     val addActionValueNameMessage: String,
     val addActionValueValueMessage: String,
@@ -74,7 +73,8 @@ data class Lines(
     val inputTemplateValueNameWithDefaultMessage: String,
     val doYouWantToAddValueMessage: String,
     val yesButton: String,
-    val noButton: String
+    val noButton: String,
+    val noHabitsRegistered: String
 )
 
 enum class Language{

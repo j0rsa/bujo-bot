@@ -1,11 +1,10 @@
 package com.j0rsa.bujo.telegram.actor
 
-import com.j0rsa.bujo.telegram.BujoMarkup.habitCreatedMarkup
+import com.j0rsa.bujo.telegram.BujoLogic
 import com.j0rsa.bujo.telegram.BujoMarkup.periodMarkup
 import com.j0rsa.bujo.telegram.BujoMarkup.valueTypeMarkup
 import com.j0rsa.bujo.telegram.Lines
 import com.j0rsa.bujo.telegram.actor.common.*
-import com.j0rsa.bujo.telegram.api.model.HabitRequest
 import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.api.model.ValueTemplate
@@ -27,7 +26,7 @@ data class CreateHabitState(
 	var quote: String? = null,
 	var bad: Boolean? = null,
 	var startFrom: LocalDateTime? = null,
-	var values: List<ValueTemplate> = emptyList(),
+	val values: MutableList<ValueTemplate> = mutableListOf(),
 	var valuesActor: SendChannel<ActorMessage>? = null
 ) : ActorState(ctx)
 
@@ -86,28 +85,23 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 		state.quote = message.text.trim()
 		true
 	}),
-	mandatoryStep({
-		sendLocalizedMessage(state, Lines::doYouWantToAddValueMessage, valueTypeMarkup(state.user.language))
+	optionalStep({
+		sendLocalizedMessage(
+			state,
+			listOf(Lines::doYouWantToAddValueMessage, Lines::orTapSkipMessage),
+			valueTypeMarkup(state.user.language)
+		)
 	}, {
 		if (state.valuesActor == null) {
-			state.valuesActor = ValueTemplateActor().yield(ValueTemplateState(state.ctx,))
+			val values = state.values
+			state.valuesActor = ValueTemplateActor().yield(ValueTemplateState(state.ctx)) {
+				values.add(
+					ValueTemplate(state.type ?: return@`yield`, state.name)
+				)
+			}
 		} else {
-			//TODO: do smt with actor
+			BujoLogic.handleSayActorMessage(message.text, state.valuesActor!!)
 		}
 		true
-	}),
-	executionStep {
-		val habitRequest = HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
-		ctx.client.createHabit(user.id, habitRequest).fold(
-			{
-				!sendLocalizedMessage(this, Lines::habitNotRegisteredMessage)
-			},
-			{ habitId ->
-				sendLocalizedMessage(
-					this,
-					Lines::habitRegisteredMessage,
-					habitCreatedMarkup(user.language, habitId)
-				)
-			})
-	}
+	})
 )

@@ -9,7 +9,10 @@ import kotlinx.coroutines.channels.SendChannel
  */
 
 interface Actor<T: ActorState> {
-	fun yield(state: T): SendChannel<ActorMessage>
+	fun yield(
+		state: T,
+		onCompletionHandler: (StateWithLocalization<T>.() -> Unit)? = null
+	): SendChannel<ActorMessage>
 }
 
 sealed class ActorMessage(private val deferred: CompletableDeferred<Boolean>) {
@@ -17,7 +20,6 @@ sealed class ActorMessage(private val deferred: CompletableDeferred<Boolean>) {
 	data class Skip(val d: CompletableDeferred<Boolean> = CompletableDeferred()) : ActorMessage(d)
 
 	fun complete() = deferred.complete(true)
-	fun completeExceptionally(exception: Throwable) = deferred.completeExceptionally(exception)
 	fun unComplete() = deferred.complete(false)
 }
 

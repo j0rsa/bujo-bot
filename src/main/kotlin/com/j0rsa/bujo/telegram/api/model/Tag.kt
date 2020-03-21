@@ -16,7 +16,7 @@ data class TagRequest(
 }
 
 data class Tag(
-    val name: String,
+    val name: String = "",
     val id: TagId? = null
 )
 

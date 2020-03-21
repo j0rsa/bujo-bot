@@ -104,6 +104,23 @@ object BujoMarkup {
         )
     }
 
+    private fun noYesMarkup(language: String): InlineKeyboardMarkup = with(BujoTalk.withLanguage(language)) {
+        InlineKeyboardMarkup(
+            listOf(
+                listOf(
+                    InlineKeyboardButton(
+                        text = noButton,
+                        callbackData = CALLBACK_NO_BUTTON
+                    ),
+                    InlineKeyboardButton(
+                        text = yesButton,
+                        callbackData = CALLBACK_YES_BUTTON
+                    )
+                )
+            )
+        )
+    }
+
     fun habitCreatedMarkup(language: String, habitId: HabitId): InlineKeyboardMarkup =
         with(BujoTalk.withLanguage(language)) {
             InlineKeyboardMarkup(
