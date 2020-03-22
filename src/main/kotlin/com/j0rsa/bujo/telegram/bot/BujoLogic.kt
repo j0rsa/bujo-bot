@@ -26,7 +26,6 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
-import me.ivmg.telegram.network.fold
 import org.http4k.core.Status
 import java.math.BigDecimal
 import java.util.*
@@ -159,10 +158,10 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                                 )
                             )
                         }
-                    }.fold {
-                        BujoBot(bot).sendGenericError(ChatId(message), user.languageCode)
                     }
-                }
+                }.handleError {
+                    BujoBot(bot).sendGenericError(ChatId(message), user.languageCode)
+                }.unsafeRunSync()
             }
         }
     }
@@ -281,7 +280,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                         }
                         .handleError {
                             bot.sendGenericError(actorContext.chatId, user.languageCode)
-                        }
+                        }.unsafeRunSync()
 
                 }
             }
@@ -303,7 +302,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 }
             }.handleError {
                 BujoBot(bot).sendGenericError(ChatId(query.message!!), user.languageCode)
-            }
+            }.unsafeRunSync()
         }
     }
 
