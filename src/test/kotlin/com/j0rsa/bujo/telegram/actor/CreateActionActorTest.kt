@@ -6,12 +6,11 @@ import arrow.fx.extensions.toIO
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import com.j0rsa.bujo.telegram.bot.ActionId
-import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
-import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
+import com.j0rsa.bujo.telegram.bot.ActionId
+import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.monad.Client
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
@@ -30,7 +29,6 @@ class CreateActionActorTest : ActorBotTest() {
 	fun testActionCreation() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user.right().toIO()
-			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
@@ -40,14 +38,8 @@ class CreateActionActorTest : ActorBotTest() {
 		actorChannel.send(sayTags())
 
 		verify(client).getUser(userId)
-		verify(client).createAction(user.id, defaultActionRequest())
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::actionCreationInitMessage))
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::actionCreationTagsInput))
-		verify(bot).sendMessage(
-			chatId,
-			getLocalizedMessage(Lines::actionRegisteredMessage),
-			replyMarkup = createdActionMarkup("en", actionId)
-		)
 		assertThat(actorChannel.isClosedForSend).isTrue()
 	}
 
@@ -63,6 +55,7 @@ class CreateActionActorTest : ActorBotTest() {
 
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
 		assertThat(actorChannel.isClosedForSend).isFalse()
+		actorChannel.close()
 	}
 
 	@Test
@@ -79,13 +72,11 @@ class CreateActionActorTest : ActorBotTest() {
 
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
 		assertThat(actorChannel.isClosedForSend).isFalse()
+		actorChannel.close()
 	}
 
-	private fun sayTags() =
-		ActorMessage.Say(tagsText)
-
-	private fun sayDescription() =
-		ActorMessage.Say(description)
+	private fun sayTags() = ActorMessage.Say(tagsText)
+	private fun sayDescription() = ActorMessage.Say(description)
 
 	private fun defaultActionRequest(
 		description: String = "description"
