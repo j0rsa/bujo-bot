@@ -5,6 +5,7 @@ import com.j0rsa.bujo.telegram.actor.common.ActorState
 import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
 import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
 import com.j0rsa.bujo.telegram.api.model.TagRequest
+import com.j0rsa.bujo.telegram.api.model.TrackerUser
 import com.j0rsa.bujo.telegram.monad.ActorContext
 
 /**
@@ -13,9 +14,10 @@ import com.j0rsa.bujo.telegram.monad.ActorContext
  */
 data class CreateActionState(
 	override val ctx: ActorContext,
+	override val trackerUser: TrackerUser,
 	var actionDescription: String = "",
 	var tags: List<TagRequest> = emptyList()
-) : ActorState(ctx)
+) : ActorState(ctx, trackerUser)
 
 object CreateActionActor : StateMachineActor<CreateActionState>(
 	mandatoryStep(

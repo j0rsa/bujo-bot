@@ -1,5 +1,6 @@
 package com.j0rsa.bujo.telegram.bot
 
+import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.ParseMode
 import me.ivmg.telegram.entities.ReplyMarkup
@@ -24,6 +25,8 @@ interface TelegramBot {
 		disableWebPagePreview: Boolean? = null,
 		replyMarkup: ReplyMarkup? = null
 	)
+
+	fun sendGenericError(chatId: ChatId, language: String?)
 }
 
 class BujoBot(private val bot: Bot) : TelegramBot {
@@ -64,6 +67,13 @@ class BujoBot(private val bot: Bot) : TelegramBot {
 			parseMode,
 			disableWebPagePreview,
 			replyMarkup
+		)
+	}
+
+	override fun sendGenericError(chatId: ChatId, language: String?) {
+		bot.sendMessage(
+			chatId.value,
+			text = BujoTalk.withLanguage(language).genericError
 		)
 	}
 }

@@ -8,10 +8,7 @@ import com.j0rsa.bujo.telegram.actor.common.ActorState
 import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
 import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
 import com.j0rsa.bujo.telegram.actor.common.optionalStep
-import com.j0rsa.bujo.telegram.api.model.Period
-import com.j0rsa.bujo.telegram.api.model.TagRequest
-import com.j0rsa.bujo.telegram.api.model.ValueTemplate
-import com.j0rsa.bujo.telegram.api.model.ValueType
+import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import java.time.LocalDateTime
 
@@ -22,6 +19,7 @@ import java.time.LocalDateTime
 
 data class CreateHabitState(
 	override val ctx: ActorContext,
+	override val trackerUser: TrackerUser,
 	var name: String = "",
 	var tags: List<TagRequest> = emptyList(),
 	var numberOfRepetitions: Int = 0,
@@ -30,7 +28,7 @@ data class CreateHabitState(
 	var bad: Boolean? = null,
 	var startFrom: LocalDateTime? = null,
 	val values: MutableList<ValueTemplate> = mutableListOf()
-) : ActorState(ctx)
+) : ActorState(ctx, trackerUser)
 
 object HabitActor : StateMachineActor<CreateHabitState>(
 	mandatoryStep({
@@ -97,7 +95,7 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 		if (state.subActor == null) {
 			val superState = state
 			state.subActor = ValueTemplateActor()
-				.yield(ValueTemplateState(state.ctx, ValueType.valueOf(message.text))) {
+				.yield(ValueTemplateState(state.ctx, state.trackerUser, ValueType.valueOf(message.text))) {
 					superState.values.add(
 						ValueTemplate(state.type, state.name)
 					)

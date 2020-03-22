@@ -1,6 +1,7 @@
 package com.j0rsa.bujo.telegram.monad
 
 import arrow.core.Either
+import arrow.fx.IO
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.bot.*
@@ -39,9 +40,9 @@ data class ActorContext(
 interface Client {
 	fun health(): Boolean
 	fun createUser(userRequest: CreateUserRequest): Pair<UserId?, Status>
-	fun getHabits(userId: UserId): List<HabitsInfo>
-	fun getUser(telegramUserId: BotUserId): User
-	fun getHabit(userId: UserId, habitId: HabitId): Habit
+	fun getHabits(userId: UserId): IO<List<HabitsInfo>>
+	fun getUser(telegramUserId: BotUserId): IO<TrackerUser>
+	fun getHabit(userId: UserId, habitId: HabitId): IO<Habit>
 	fun createAction(userId: UserId, actionRequest: ActionRequest): Either<BotError, ActionId>
 	fun addValue(userId: UserId, actionId: ActionId, value: Value): Either<BotError, ActionId>
 	fun getAction(userId: UserId, actionId: ActionId): Either<BotError, Action>

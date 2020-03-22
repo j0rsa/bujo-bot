@@ -1,17 +1,20 @@
 package com.j0rsa.bujo.telegram.bot
 
+import arrow.fx.IO
+import arrow.fx.extensions.fx
+import arrow.fx.handleError
 import com.j0rsa.bujo.telegram.Config
 import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.api.TrackerClient
-import com.j0rsa.bujo.telegram.api.model.ActionRequest
-import com.j0rsa.bujo.telegram.api.model.CreateUserRequest
-import com.j0rsa.bujo.telegram.api.model.HabitRequest
-import com.j0rsa.bujo.telegram.api.model.HabitsInfo
+import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.habitCreatedMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.habitMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.newHabitMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.permanentMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.settingsMarkup
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import com.j0rsa.bujo.telegram.bot.i18n.Language
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
@@ -23,6 +26,7 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
+import me.ivmg.telegram.network.fold
 import org.http4k.core.Status
 import java.math.BigDecimal
 import java.util.*
@@ -136,32 +140,27 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     fun showHabits(bot: Bot, update: Update) {
         update.message?.let { message ->
             message.from?.let { user ->
-                val trackerUser = TrackerClient.getUser(BotUserId(user.id))
-                val habits = TrackerClient.getHabits(trackerUser.id)
-                with(BujoTalk.withLanguage(user.languageCode)) {
-                    if (habits.isEmpty()) {
-                        bot.sendMessage(
-                            message.chat.id,
-                            text = noHabitsRegistered,
-                            replyMarkup = InlineKeyboardMarkup(
-                                listOf(
-                                    listOf(
-                                        InlineKeyboardButton(
-                                            createHabitButton,
-                                            callbackData = CALLBACK_CREATE_HABIT_BUTTON
-                                        )
-                                    )
+                IO.fx {
+                    val (trackerUser) = TrackerClient.getUser(BotUserId(user.id))
+                    val (habits) = TrackerClient.getHabits(trackerUser.id)
+                    with(BujoTalk.withLanguage(user.languageCode)) {
+                        if (habits.isEmpty()) {
+                            bot.sendMessage(
+                                message.chat.id,
+                                text = noHabitsRegistered,
+                                replyMarkup = newHabitMarkup(user.languageCode)
+                            )
+                        } else {
+                            bot.sendMessage(
+                                message.chat.id,
+                                text = showHabitsMessage,
+                                replyMarkup = InlineKeyboardMarkup(
+                                    habits.toHabitsInlineKeys()
                                 )
                             )
-                        )
-                    } else {
-                        bot.sendMessage(
-                            message.chat.id,
-                            text = showHabitsMessage,
-                            replyMarkup = InlineKeyboardMarkup(
-                                habits.toHabitsInlineKeys()
-                            )
-                        )
+                        }
+                    }.fold {
+                        BujoBot(bot).sendGenericError(ChatId(message), user.languageCode)
                     }
                 }
             }
@@ -169,9 +168,9 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     }
 
     fun createAction(bot: Bot, update: Update) =
-        initNewActor(bot, update) { _, _, ctx ->
+        initNewActor(BujoBot(bot), update) { user, trackerUser, _, ctx ->
             CreateActionActor.yield(
-                CreateActionState(ctx)
+                CreateActionState(ctx, trackerUser)
             ) {
                 cause ?: with(state) {
                     ctx.client.createAction(trackerUser.id, ActionRequest(actionDescription, tags)).fold(
@@ -188,45 +187,51 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                             )
                         })
                 }
+                userActors.remove(BotUserId(user))
             }
         }
 
-    fun addValue(message: CallbackMessage) {
-        launch {
-            userActors[message.userId]?.close()
-            userActors[message.userId] = AddValueActor.yield(
+    fun addValue(
+        callbackMessage: CallbackMessage,
+        update: Update
+    ) {
+        initNewActor(callbackMessage.bot, update) { user, trackerUser, _, ctx ->
+            AddValueActor.yield(
                 AddValueState(
-                    message.toContext(this),
-                    ActionId(UUID.fromString(message.callBackData))
+                    ctx,
+                    trackerUser,
+                    ActionId(UUID.fromString(callbackMessage.callBackData))
                 )
-            )
+            ) {
+                with(state) {
+                    ctx.client.addValue(trackerUser.id, actionId, Value(type, value, name)).fold(
+                        {
+                            !sendLocalizedMessage(state, Lines::addActionValueNotRegistered)
+                        },
+                        {
+                            sendLocalizedMessage(state, Lines::addActionValueRegistered)
+                        }
+                    )
+                }
+                userActors.remove(BotUserId(user))
+            }
         }
     }
 
     fun showSettings(bot: Bot, update: Update) {
         update.message?.let {
-            val withLanguage = BujoTalk.withLanguage(it.from?.languageCode)
             bot.sendMessage(
                 ChatId(it).value,
-                withLanguage.settingsMessage,
-                replyMarkup = InlineKeyboardMarkup(
-                    listOf(
-                        listOf(
-                            InlineKeyboardButton(
-                                withLanguage.checkBackendButton,
-                                callbackData = CALLBACK_SETTINGS_CHECK_BACKEND
-                            )
-                        )
-                    )
-                )
+                BujoTalk.withLanguage(it.from?.languageCode).settingsMessage,
+                replyMarkup = settingsMarkup(it.from?.languageCode)
             )
         }
     }
 
     fun createHabit(bot: Bot, update: Update) =
-        initNewActor(bot, update) { user, _, ctx ->
+        initNewActor(BujoBot(bot), update) { user, trackerUser, _, ctx ->
             HabitActor.yield(
-                CreateHabitState(ctx)
+                CreateHabitState(ctx, trackerUser)
             ) {
                 cause ?: with(state) {
                     val habitRequest =
@@ -245,34 +250,59 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                                 habitCreatedMarkup(trackerUser.language, habitId)
                             )
                         })
-                    userActors.remove(
-                        BotUserId(
-                            user
-                        )
-                    )
                 }
+                userActors.remove(BotUserId(user))
             }
         }
 
     private fun initNewActor(
-        bot: Bot,
+        bot: BujoBot,
         update: Update,
-        init: (user: User, message: Message, ctx: ActorContext) -> SendChannel<ActorMessage>
+        init: (user: User, trackerUser: TrackerUser, message: Message, ctx: ActorContext) -> SendChannel<ActorMessage>
     ) {
         (update.message ?: update.callbackQuery?.message)?.let { message ->
             (update.callbackQuery?.from ?: message.from)?.let { user: User ->
                 launch {
                     val userId = BotUserId(user)
                     userActors[userId]?.close()
-                    userActors[userId] = init(
-                        user,
-                        message,
-                        ActorContext(
-                            ChatId(message),
-                            BotUserId(user),
-                            BujoBot(bot), this)
+                    val actorContext = ActorContext(
+                        ChatId(message),
+                        BotUserId(user),
+                        bot, this
+                    )
+                    actorContext.client.getUser(actorContext.userId)
+                        .map { trackerUser ->
+                            userActors[userId] = init(
+                                user,
+                                trackerUser,
+                                message,
+                                actorContext
+                            )
+                        }
+                        .handleError {
+                            bot.sendGenericError(actorContext.chatId, user.languageCode)
+                        }
+
+                }
+            }
+        }
+    }
+
+    fun showHabit(bot: Bot, query: CallbackQuery, habitId: UUID) {
+        query.from.let { user ->
+            IO.fx {
+                val (trackerUser) = TrackerClient.getUser(BotUserId(user))
+                val (habit) = TrackerClient.getHabit(trackerUser.id, HabitId(habitId))
+                with(BujoTalk.withLanguage(user.languageCode)) {
+                    bot.sendMessage(
+                        ChatId(query.message!!).value,
+                        "$habitBoldMessage: ${habit.name}\nasd",
+                        replyMarkup = habitMarkup(query.from.languageCode, habit),
+                        parseMode = ParseMode.MARKDOWN
                     )
                 }
+            }.handleError {
+                BujoBot(bot).sendGenericError(ChatId(query.message!!), user.languageCode)
             }
         }
     }
@@ -288,7 +318,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 }
 
 sealed class BotMessage(
-    private val bot: BujoBot,
+    val bot: BujoBot,
     private val chatId: ChatId,
     val userId: BotUserId
 ) {
@@ -314,7 +344,7 @@ private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButto
         val habitCaption = "${habitsInfo.habit.name}$streakCaption"
         listOf(
             InlineKeyboardButton("◻️" or "✅️", callbackData = "asd"),
-            InlineKeyboardButton(habitCaption, callbackData = "dsa")
+            InlineKeyboardButton(habitCaption, callbackData = "$CALLBACK_VIEW_HABIT: ${habitsInfo.habit.id?.value}")
         )
     }
 

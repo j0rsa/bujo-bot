@@ -1,6 +1,8 @@
 package com.j0rsa.bujo.telegram.actor
 
 import arrow.core.Either
+import arrow.core.right
+import arrow.fx.extensions.toIO
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
@@ -29,11 +31,12 @@ internal class AddValueActorTest : ActorBotTest() {
 	@Test
 	fun testSuccessAddValue() = runBlockingTest {
 		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
+			on { getUser(userId) } doReturn user.right().toIO()
 			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 
-		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
+		val trackerUser = client.getUser(userId).unsafeRunSync()
+		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser,  actionId))
 		actorChannel.send(sayType())
 		actorChannel.send(sayName())
 		actorChannel.send(sayValue())
@@ -57,10 +60,11 @@ internal class AddValueActorTest : ActorBotTest() {
 	@Test
 	fun typeCanNotBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
+			on { getUser(userId) } doReturn user.right().toIO()
 		}
 
-		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
+		val trackerUser = client.getUser(userId).unsafeRunSync()
+		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser, actionId))
 		actorChannel.send(skip())
 
 		verify(bot).sendMessage(
@@ -75,11 +79,12 @@ internal class AddValueActorTest : ActorBotTest() {
 	@Test
 	fun valueCanNotBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
+			on { getUser(userId) } doReturn user.right().toIO()
 			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 
-		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
+		val trackerUser = client.getUser(userId).unsafeRunSync()
+		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser, actionId))
 		actorChannel.send(sayType())
 		actorChannel.send(sayName())
 		actorChannel.send(skip())
@@ -106,11 +111,12 @@ internal class AddValueActorTest : ActorBotTest() {
 	@Test
 	fun whenSkipNameThenAddWithDefaultName() = runBlockingTest {
 		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
+			on { getUser(userId) } doReturn user.right().toIO()
 			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 
-		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), actionId))
+		val trackerUser = client.getUser(userId).unsafeRunSync()
+		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser, actionId))
 		actorChannel.send(sayType())
 		actorChannel.send(skip())
 		actorChannel.send(sayValue())

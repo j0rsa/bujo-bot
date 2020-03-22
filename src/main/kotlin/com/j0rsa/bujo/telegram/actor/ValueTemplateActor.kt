@@ -4,6 +4,7 @@ import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorState
 import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
 import com.j0rsa.bujo.telegram.actor.common.optionalStep
+import com.j0rsa.bujo.telegram.api.model.TrackerUser
 import com.j0rsa.bujo.telegram.api.model.ValueType
 import com.j0rsa.bujo.telegram.monad.ActorContext
 
@@ -14,9 +15,10 @@ import com.j0rsa.bujo.telegram.monad.ActorContext
 
 data class ValueTemplateState(
     override val ctx: ActorContext,
+    override val trackerUser: TrackerUser,
     var type: ValueType,
     var name: String? = null
-) : ActorState(ctx)
+) : ActorState(ctx, trackerUser)
 
 class ValueTemplateActor : StateMachineActor<ValueTemplateState>(
 //    mandatoryStep({

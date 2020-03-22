@@ -2,7 +2,7 @@ package com.j0rsa.bujo.telegram.actor.common
 
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
-import com.j0rsa.bujo.telegram.api.model.User
+import com.j0rsa.bujo.telegram.api.model.TrackerUser
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
@@ -96,7 +96,7 @@ interface Localized {
 
 abstract class ActorState(
     open val ctx: ActorContext,
-    val trackerUser: User = ctx.client.getUser(ctx.userId),
+    open val trackerUser: TrackerUser,
     var subActor: SendChannel<ActorMessage>? = null
 )
 

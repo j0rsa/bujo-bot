@@ -8,17 +8,18 @@ import com.j0rsa.bujo.telegram.actor.common.ActorState
 import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
 import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
 import com.j0rsa.bujo.telegram.actor.common.optionalStep
-import com.j0rsa.bujo.telegram.api.model.Value
+import com.j0rsa.bujo.telegram.api.model.TrackerUser
 import com.j0rsa.bujo.telegram.api.model.ValueType
 import com.j0rsa.bujo.telegram.monad.ActorContext
 
 data class AddValueState(
 	override val ctx: ActorContext,
+	override val trackerUser: TrackerUser,
 	val actionId: ActionId,
 	var type: ValueType = ValueType.values().random(),
 	var name: String = "",
 	var value: String = ""
-) : ActorState(ctx)
+) : ActorState(ctx, trackerUser)
 
 object AddValueActor : StateMachineActor<AddValueState>(
 	mandatoryStep({
@@ -42,15 +43,6 @@ object AddValueActor : StateMachineActor<AddValueState>(
 		sendLocalizedMessage(state, Lines::addActionValueValueMessage, valueMarkup(state.type))
 	}, {
 		state.value = message.text
-		with(state) {
-			ctx.client.addValue(trackerUser.id, actionId, Value(type, value, name)).fold(
-				{
-					!sendLocalizedMessage(state, Lines::addActionValueNotRegistered)
-				},
-				{
-					sendLocalizedMessage(state, Lines::addActionValueRegistered)
-				}
-			)
-		}
+		true
 	})
 )

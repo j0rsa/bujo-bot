@@ -14,7 +14,7 @@ data class CreateUserRequest(
     val language: String = ""
 )
 
-data class User(
+data class TrackerUser(
     val id: UserId,
     val telegramId: Long,
     val firstName: String = "",

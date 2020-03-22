@@ -1,9 +1,12 @@
 package com.j0rsa.bujo.telegram.api
 
 import arrow.core.Either
+import arrow.core.extensions.either.monad.flatten
 import arrow.core.left
 import arrow.core.right
-import com.j0rsa.bujo.telegram.*
+import arrow.fx.IO
+import arrow.fx.extensions.toIO
+import com.j0rsa.bujo.telegram.Config
 import com.j0rsa.bujo.telegram.api.RequestLens.actionIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionRequestLens
@@ -34,15 +37,14 @@ import org.slf4j.LoggerFactory.getLogger
 
 object TrackerClient : Client {
 	private val logger = getLogger(this::class.java.name)
-	var httpLogging = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
-		override fun log(message: String) {
-			logger.debug(message)
-		}
-	}).apply { setLevel(HttpLoggingInterceptor.Level.valueOf(Config.app.httpLoggingLevel)) }
+	var httpLogging = HttpLoggingInterceptor(HttpLoggingInterceptor.Logger { message -> logger.debug(message) }).apply {
+		level = HttpLoggingInterceptor.Level.valueOf(Config.app.httpLoggingLevel)
+	}
 	private val client = OkHttp(
 		OkHttpClient.Builder()
 			.followRedirects(false)
 			.addInterceptor(httpLogging)
+
 			.build()
 	)
 
@@ -57,50 +59,50 @@ object TrackerClient : Client {
 			telegramUserIdLens(response) to response.status
 	}
 
-	override fun getHabits(userId: UserId): List<HabitsInfo> {
+	override fun getHabits(userId: UserId): IO<List<HabitsInfo>> {
 		val response = client("/habits".get().with(userId))
-		return multipleHabitsLens(response)
+		return multipleHabitsLens(response).toIO()
 	}
 
-	override fun getUser(telegramUserId: BotUserId): User {
+	override fun getUser(telegramUserId: BotUserId): IO<TrackerUser> {
 		val response = client("/users/${telegramUserId.value}".get())
-		return userLens(response)
+		return userLens(response).toIO()
 	}
 
-	override fun getHabit(userId: UserId, habitId: HabitId): Habit =
-		habitLens(client("/habits/$habitId".get().with(userId)))
+	override fun getHabit(userId: UserId, habitId: HabitId): IO<Habit> =
+		habitLens(client("/habits/${habitId.value}".get().with(userId))).toIO()
 
 	override fun createHabit(userId: UserId, habit: HabitRequest): Either<BotError, HabitId> =
 		with(client(habitRequestLens(habit, "/habits".post().with(userId)))) {
 			when (status) {
-				Status.OK, Status.CREATED -> habitIdLens(this).right()
+				Status.OK, Status.CREATED -> habitIdLens(this).toBotEither().right()
 				else -> NotCreated.left()
 			}
-		}
+		}.flatten()
 
 	override fun createAction(userId: UserId, actionRequest: ActionRequest): Either<BotError, ActionId> =
 		with(client(actionRequestLens(actionRequest, "/actions".post().with(userId)))) {
 			return when (status) {
-				Status.OK, Status.CREATED -> Either.Right(actionIdLens(this))
-				else -> Either.Left(NotCreated)
-			}
+				Status.OK, Status.CREATED -> actionIdLens(this).toBotEither().right()
+				else -> NotCreated.left()
+			}.flatten()
 		}
 
 	override fun getAction(userId: UserId, actionId: ActionId): Either<BotError, Action> {
 		val response = client("/actions/${actionId.value}".get().with(userId))
 		return when (response.status) {
-			Status.OK -> Either.Right(actionLens(response))
+			Status.OK -> actionLens(response).toBotEither().right()
 			Status.NOT_FOUND -> Either.Left(NotFound)
 			else -> Either.Left(NotCreated)
-		}
+		}.flatten()
 	}
 
 	override fun addValue(userId: UserId, actionId: ActionId, value: Value): Either<BotError, ActionId> {
 		val response = client(valueRequestLens(value, "/actions/${actionId.value}/value".post().with(userId)))
 		return when (response.status) {
-			Status.OK, Status.CREATED -> Either.Right(actionIdLens(response))
+			Status.OK, Status.CREATED -> actionIdLens(response).toBotEither().right()
 			else -> Either.Left(NotCreated)
-		}
+		}.flatten()
 	}
 
 	private fun Request.with(userId: UserId) =
@@ -111,4 +113,7 @@ object TrackerClient : Client {
 
 	private fun String.post() =
 		Request(Method.POST, Uri.of(Config.app.tracker.url).path(this))
+
+	private fun <T> Either<Exception, T>.toBotEither(): Either<BotError, T> =
+		this.mapLeft { BotError.SystemError(it.message ?: "Unknown error") }
 }

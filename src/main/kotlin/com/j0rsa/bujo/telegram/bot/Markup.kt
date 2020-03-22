@@ -1,13 +1,11 @@
 package com.j0rsa.bujo.telegram.bot
 
 import com.j0rsa.bujo.telegram.api.model.Action
+import com.j0rsa.bujo.telegram.api.model.Habit
 import com.j0rsa.bujo.telegram.api.model.Period
 import com.j0rsa.bujo.telegram.api.model.ValueType
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
-import me.ivmg.telegram.entities.InlineKeyboardButton
-import me.ivmg.telegram.entities.InlineKeyboardMarkup
-import me.ivmg.telegram.entities.KeyboardButton
-import me.ivmg.telegram.entities.KeyboardReplyMarkup
+import me.ivmg.telegram.entities.*
 import java.time.LocalDateTime
 
 /**
@@ -148,6 +146,34 @@ object Markup {
             )
         }
 
+    fun newHabitMarkup(language: String?): InlineKeyboardMarkup =
+        with(BujoTalk.withLanguage(language)) {
+            InlineKeyboardMarkup(
+                listOf(
+                    listOf(
+                        InlineKeyboardButton(
+                            createHabitButton,
+                            callbackData = CALLBACK_CREATE_HABIT_BUTTON
+                        )
+                    )
+                )
+            )
+        }
+
+    fun settingsMarkup(language: String?): InlineKeyboardMarkup =
+        with(BujoTalk.withLanguage(language)) {
+            InlineKeyboardMarkup(
+                listOf(
+                    listOf(
+                        InlineKeyboardButton(
+                            checkBackendButton,
+                            callbackData = CALLBACK_SETTINGS_CHECK_BACKEND
+                        )
+                    )
+                )
+            )
+        }
+
     private fun nowMarkup(): InlineKeyboardMarkup = InlineKeyboardMarkup(
         listOf(
             listOf(
@@ -158,6 +184,20 @@ object Markup {
             )
         )
     )
+
+    fun habitMarkup(language: String?, habit: Habit): ReplyMarkup =
+        with(BujoTalk.withLanguage(language)) {
+            InlineKeyboardMarkup(
+                listOf(
+                    listOf(
+                        InlineKeyboardButton(
+                            deleteButton,
+                            callbackData = "$CALLBACK_DELETE_HABIT_BUTTON: ${habit.id}"
+                        )
+                    )
+                )
+            )
+        }
 
     private const val TODO_TEMPLATE = "todo"
 }

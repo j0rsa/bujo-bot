@@ -14,8 +14,11 @@ import me.ivmg.telegram.dispatcher.command
 import me.ivmg.telegram.dispatcher.message
 import me.ivmg.telegram.entities.CallbackQuery
 import me.ivmg.telegram.entities.Message
+import me.ivmg.telegram.entities.Update
 import me.ivmg.telegram.extensions.filters.Filter
 import okhttp3.logging.HttpLoggingInterceptor
+import org.slf4j.LoggerFactory
+import java.util.*
 
 /**
  * @author red
@@ -23,6 +26,7 @@ import okhttp3.logging.HttpLoggingInterceptor
  */
 
 class App {
+	private val logger = LoggerFactory.getLogger(this::class.java.name)
 	fun run() {
 		val bot = bot {
 			token = Config.app.token
@@ -38,19 +42,18 @@ class App {
 				message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
 				message(Filter.Text and notTextButton()) { _, update ->
 					val message = update.message ?: return@message
-					val userId =
-						BotUserId(message.from ?: return@message)
+					val userId = BotUserId(message.from ?: return@message)
 					val text = message.text ?: return@message
 
 					handleUserActorSayMessage(
 						HandleActorMessage(userId, ChatId(message), text)
 					)
-                }
+				}
 				callbackQuery(CALLBACK_ADD_VALUE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					val message = callbackQuery.message ?: return@callbackQuery
 					deleteMessage(bot, message)
-					addValueCallback(callbackQuery, message, bot)
+					addValueCallback(callbackQuery, update, bot)
 				}
 				callbackQuery(CALLBACK_ACTOR_TEMPLATE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
@@ -63,6 +66,13 @@ class App {
 					val message = callbackQuery.message ?: return@callbackQuery
 					deleteMessage(bot, message)
 					BujoLogic.checkBackendStatus(bot, message)
+				}
+				callbackQuery(CALLBACK_VIEW_HABIT) { bot, update ->
+					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+					val habitId = parse(callbackQuery.data, CALLBACK_VIEW_HABIT)
+//					val message = callbackQuery.message ?: return@callbackQuery
+//					deleteMessage(bot, message)
+					BujoLogic.showHabit(bot, callbackQuery, UUID.fromString(habitId))
 				}
 //				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
 //					val callbackQuery = update.callbackQuery ?: return@callbackQuery
@@ -105,15 +115,18 @@ class App {
 			bot.deleteMessage(message.chat.id, message.messageId)
 		}
 
-		private fun addValueCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {
+		private fun addValueCallback(callbackQuery: CallbackQuery, update: Update, bot: Bot) {
 			val userId = BotUserId(callbackQuery.from)
 			val data = parse(callbackQuery.data, CALLBACK_ADD_VALUE)
 
 			addValue(
 				CallbackMessage(
-					BujoBot(bot), userId,
-					ChatId(message), data
-				)
+					BujoBot(bot),
+					userId,
+					ChatId(update.message?.chat?.id ?: 0L),
+					data
+				),
+				update
 			)
 		}
 
@@ -126,25 +139,25 @@ class App {
 			).fold(Filter.All as Filter, { acc, filter -> acc and filter.not() })
 
 		object CreateHabitButtonFilter : Filter {
-            override fun Message.predicate(): Boolean =
-                text == BujoTalk.withLanguage(from?.languageCode).createHabitButton
-        }
+			override fun Message.predicate(): Boolean =
+				text == BujoTalk.withLanguage(from?.languageCode).createHabitButton
+		}
 
-        object ShowHabitsButtonFilter : Filter {
-            override fun Message.predicate(): Boolean =
-                text == BujoTalk.withLanguage(from?.languageCode).showHabitsButton
-        }
+		object ShowHabitsButtonFilter : Filter {
+			override fun Message.predicate(): Boolean =
+				text == BujoTalk.withLanguage(from?.languageCode).showHabitsButton
+		}
 
-        object CreateActionButtonFilter : Filter {
-            override fun Message.predicate(): Boolean =
-                text == BujoTalk.withLanguage(from?.languageCode).createActionButton
-        }
+		object CreateActionButtonFilter : Filter {
+			override fun Message.predicate(): Boolean =
+				text == BujoTalk.withLanguage(from?.languageCode).createActionButton
+		}
 
 		object SettingsButtonFilter : Filter {
 			override fun Message.predicate(): Boolean =
 				text == BujoTalk.withLanguage(from?.languageCode).settingsButton
 		}
 
-		private fun parse(text: String, template: String): String = text.substringAfter("$template:")
+		private fun parse(text: String, template: String): String = text.substringAfter("$template:").trim()
 	}
 }

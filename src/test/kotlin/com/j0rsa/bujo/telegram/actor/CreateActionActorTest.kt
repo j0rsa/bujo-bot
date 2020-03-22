@@ -1,6 +1,8 @@
 package com.j0rsa.bujo.telegram.actor
 
 import arrow.core.Either
+import arrow.core.right
+import arrow.fx.extensions.toIO
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
@@ -27,11 +29,12 @@ class CreateActionActorTest : ActorBotTest() {
 	@Test
 	fun testActionCreation() = runBlockingTest {
 		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
+			on { getUser(userId) } doReturn user.right().toIO()
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
 
-		val state = CreateActionState(actorContext(client))
+		val trackerUser = client.getUser(userId).unsafeRunSync()
+		val state = CreateActionState(actorContext(client), trackerUser)
 		val actorChannel = CreateActionActor.yield(state)
 		actorChannel.send(sayDescription())
 		actorChannel.send(sayTags())
@@ -51,10 +54,11 @@ class CreateActionActorTest : ActorBotTest() {
 	@Test
 	fun whenSkipOnEmptyDescriptionThenCanNotBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
+			on { getUser(userId) } doReturn user.right().toIO()
 		}
 
-		val actorChannel = CreateActionActor.yield(CreateActionState(actorContext(client)))
+		val trackerUser = client.getUser(userId).unsafeRunSync()
+		val actorChannel = CreateActionActor.yield(CreateActionState(actorContext(client), trackerUser))
 		actorChannel.send(ActorMessage.Skip)
 
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
@@ -64,11 +68,12 @@ class CreateActionActorTest : ActorBotTest() {
 	@Test
 	fun whenSkipOnEmptyTagsThenCanNotBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
-			on { getUser(userId) } doReturn user
+			on { getUser(userId) } doReturn user.right().toIO()
 			on { createAction(user.id, defaultActionRequest()) } doReturn Either.Right(actionId)
 		}
 
-		val actorChannel = CreateActionActor.yield(CreateActionState(actorContext(client)))
+		val trackerUser = client.getUser(userId).unsafeRunSync()
+		val actorChannel = CreateActionActor.yield(CreateActionState(actorContext(client), trackerUser))
 		actorChannel.send(sayDescription())
 		actorChannel.send(ActorMessage.Skip)
 

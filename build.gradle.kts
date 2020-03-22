@@ -31,6 +31,7 @@ dependencies {
     implementation(Libs.logbackCore)
     implementation(Libs.arrowFx)
     implementation(Libs.arrowSyntax)
+    implementation(Libs.arrowTypeclasses)
     kapt(Libs.arrowMeta)
 
     testImplementation(TestLibs.junit)
