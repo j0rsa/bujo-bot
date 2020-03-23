@@ -51,5 +51,12 @@ data class Lines(
     val noHabitsRegistered: String,
     val valueAddedMessage: String,
     val deleteButton: String,
-    val habitBoldMessage: String
+    val habitMessage: String,
+    val nameMessage: String,
+    val tagsName: String,
+    val repetitionsMessage: String,
+    val dayMessage: String,
+    val weekMessage: String,
+    val quoteMessage: String,
+    val addHabitActionButton: String
 )

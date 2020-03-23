@@ -58,36 +58,36 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 replyMarkup = InlineKeyboardMarkup(
                     listOf(
                         BujoTalk.getSupportedLanguageCodesWithFlags().map {
-							InlineKeyboardButton(it.second, callbackData = it.first.name)
-						}
-					)
-				)
+                            InlineKeyboardButton(it.second, callbackData = it.first.name)
+                        }
+                    )
+                )
 
-			)
-		}
-	}
+            )
+        }
+    }
 
-	fun showCurrentLanguage(bot: Bot, update: Update) {
-		update.message?.let { message ->
-			bot.sendMessage(
-				message.chat.id,
-				BujoTalk.getSupportedLanguageCodesWithFlags()
+    fun showCurrentLanguage(bot: Bot, update: Update) {
+        update.message?.let { message ->
+            bot.sendMessage(
+                message.chat.id,
+                BujoTalk.getSupportedLanguageCodesWithFlags()
                     .first { it.first == Language.valueOf(message.from!!.languageCode!!.toUpperCase()) }.second
-			)
-		}
-	}
+            )
+        }
+    }
 
-	fun registerTelegramUser(bot: Bot, update: Update) {
-		update.message?.let { message ->
-			message.from?.let {
-				val (_, status) = TrackerClient.createUser(
-					CreateUserRequest(
-						telegramId = it.id,
-						firstName = it.firstName,
-						lastName = it.lastName ?: "",
-						language = it.languageCode ?: Config.app.defaultLanguage.toLowerCase()
-					)
-				)
+    fun registerTelegramUser(bot: Bot, update: Update) {
+        update.message?.let { message ->
+            message.from?.let {
+                val (_, status) = TrackerClient.createUser(
+                    CreateUserRequest(
+                        telegramId = it.id,
+                        firstName = it.firstName,
+                        lastName = it.lastName ?: "",
+                        language = it.languageCode ?: Config.app.defaultLanguage.toLowerCase()
+                    )
+                )
                 val text = when (status) {
                     Status.CREATED -> BujoTalk.withLanguage(it.languageCode).welcome
                     Status.OK -> BujoTalk.withLanguage(it.languageCode).welcomeBack
@@ -291,11 +291,23 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         query.from.let { user ->
             IO.fx {
                 val (trackerUser) = TrackerClient.getUser(BotUserId(user))
-                val (habit) = TrackerClient.getHabit(trackerUser.id, HabitId(habitId))
+                val (habitInfo) = TrackerClient.getHabit(trackerUser.id, HabitId(habitId))
+                val (habit, streakRow) = habitInfo
                 with(BujoTalk.withLanguage(user.languageCode)) {
                     bot.sendMessage(
                         ChatId(query.message!!).value,
-                        "$habitBoldMessage: ${habit.name}\nasd",
+                        """
+                            *$habitMessage:*
+                            
+                            *$nameMessage:* ${habit.name}
+                            ${if(streakRow.currentStreak> BigDecimal.ONE) doYouWantToAddValueMessage.format(streakRow.currentStreak) else ""}
+                            *$tagsName:* ${habit.tags.joinToString(separator = " ") { "\uD83C\uDFF7${it.name}" }}
+                            *$repetitionsMessage:* ${habit.numberOfRepetitions} / ${when (habit.period) {
+                            Period.Week -> weekMessage
+                            Period.Day -> dayMessage
+                        }}
+                            ${if(habit.quote?.isNotEmpty() == true) "*$quoteMessage*: ${habit.quote}" else ""}
+                        """.trimIndent(),
                         replyMarkup = habitMarkup(query.from.languageCode, habit),
                         parseMode = ParseMode.MARKDOWN
                     )
@@ -321,14 +333,14 @@ sealed class BotMessage(
     private val chatId: ChatId,
     val userId: BotUserId
 ) {
-	class CallbackMessage(
+    class CallbackMessage(
         bot: BujoBot,
         userId: BotUserId,
         chatId: ChatId,
         val callBackData: String
-	) : BotMessage(bot, chatId, userId)
+    ) : BotMessage(bot, chatId, userId)
 
-	fun toContext(scope: CoroutineScope) = ActorContext(chatId, userId, bot, scope)
+    fun toContext(scope: CoroutineScope) = ActorContext(chatId, userId, bot, scope)
 }
 
 class HandleActorMessage(
@@ -338,7 +350,7 @@ class HandleActorMessage(
 )
 
 private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButton>> =
-	this.map { habitsInfo ->
+    this.map { habitsInfo ->
         val streakCaption = if (habitsInfo.currentStreak > BigDecimal.ONE) " 🎯: ${habitsInfo.currentStreak}" else ""
         val habitCaption = "${habitsInfo.habit.name}$streakCaption"
         listOf(

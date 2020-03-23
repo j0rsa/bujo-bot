@@ -70,8 +70,7 @@ class App {
 				callbackQuery(CALLBACK_VIEW_HABIT) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					val habitId = parse(callbackQuery.data, CALLBACK_VIEW_HABIT)
-//					val message = callbackQuery.message ?: return@callbackQuery
-//					deleteMessage(bot, message)
+					callbackQuery.message ?: return@callbackQuery
 					BujoLogic.showHabit(bot, callbackQuery, UUID.fromString(habitId))
 				}
 //				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->

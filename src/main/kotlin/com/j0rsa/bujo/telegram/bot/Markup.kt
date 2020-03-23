@@ -1,9 +1,6 @@
 package com.j0rsa.bujo.telegram.bot
 
-import com.j0rsa.bujo.telegram.api.model.Action
-import com.j0rsa.bujo.telegram.api.model.Habit
-import com.j0rsa.bujo.telegram.api.model.Period
-import com.j0rsa.bujo.telegram.api.model.ValueType
+import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import me.ivmg.telegram.entities.*
 import java.time.LocalDateTime
@@ -188,7 +185,14 @@ object Markup {
     fun habitMarkup(language: String?, habit: Habit): ReplyMarkup =
         with(BujoTalk.withLanguage(language)) {
             InlineKeyboardMarkup(
+                tagButtons(habit.tags) +
                 listOf(
+                    listOf(
+                        InlineKeyboardButton(
+                            addHabitActionButton,
+                            callbackData = "$CALLBACK_ADD_HABIT_ACTION_BUTTON: ${habit.id}"
+                        )
+                    ),
                     listOf(
                         InlineKeyboardButton(
                             deleteButton,
@@ -197,6 +201,16 @@ object Markup {
                     )
                 )
             )
+        }
+
+    private fun tagButtons(tags: List<Tag>): List<List<InlineKeyboardButton>> =
+        tags.chunked(3).map {
+            it.map {
+                InlineKeyboardButton(
+                    "\uD83C\uDFF7${it.name}",
+                    callbackData = "$CALLBACK_SHOW_HABITS_BY_TAG_ID_BUTTON: ${it.id}"
+                )
+            }
         }
 
     private const val TODO_TEMPLATE = "todo"
