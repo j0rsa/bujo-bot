@@ -108,7 +108,7 @@ object Markup {
         )
     }
 
-    private fun noYesMarkup(language: String): InlineKeyboardMarkup = with(
+    fun noYesMarkup(language: String?, yesCallback: String): InlineKeyboardMarkup = with(
         BujoTalk.withLanguage(
             language
         )
@@ -122,7 +122,7 @@ object Markup {
                     ),
                     InlineKeyboardButton(
                         text = yesButton,
-                        callbackData = CALLBACK_YES_BUTTON
+                        callbackData = yesCallback
                     )
                 )
             )
@@ -196,7 +196,7 @@ object Markup {
                     listOf(
                         InlineKeyboardButton(
                             deleteButton,
-                            callbackData = "$CALLBACK_DELETE_HABIT_BUTTON: ${habit.id?.value}"
+                            callbackData = "$CALLBACK_CONFIRM_DELETE_HABIT: ${habit.id?.value}"
                         )
                     )
                 )

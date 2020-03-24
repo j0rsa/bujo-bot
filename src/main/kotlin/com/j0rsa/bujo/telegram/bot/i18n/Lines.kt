@@ -59,5 +59,6 @@ data class Lines(
     val weekMessage: String,
     val quoteMessage: String,
     val youAreOnStreakMessage: String,
-    val addHabitActionButton: String
+    val addHabitActionButton: String,
+    val sureThatWantToDeleteTheHabit: String
 )

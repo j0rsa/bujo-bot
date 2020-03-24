@@ -73,6 +73,17 @@ class App {
 					callbackQuery.message ?: return@callbackQuery
 					BujoLogic.showHabit(bot, callbackQuery, UUID.fromString(habitId))
 				}
+				callbackQuery(CALLBACK_CONFIRM_DELETE_HABIT) { bot, update ->
+					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+					val habitId = parse(callbackQuery.data, CALLBACK_VIEW_HABIT)
+					callbackQuery.message ?: return@callbackQuery
+					BujoLogic.showHabitDeleteConfirmation(bot, callbackQuery, UUID.fromString(habitId))
+				}
+				callbackQuery(CALLBACK_NO_BUTTON) { bot, update ->
+					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+					val message = callbackQuery.message ?: return@callbackQuery
+					deleteMessage(bot, message)
+				}
 //				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
 //					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 //					val message = callbackQuery.message ?: return@callbackQuery

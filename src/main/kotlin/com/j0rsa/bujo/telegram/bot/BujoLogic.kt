@@ -13,6 +13,7 @@ import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.habitCreatedMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.habitMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.newHabitMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.noYesMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.permanentMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.settingsMarkup
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
@@ -29,6 +30,7 @@ import me.ivmg.telegram.entities.*
 import org.http4k.core.Status
 import java.math.BigDecimal
 import java.util.*
+import kotlin.reflect.KProperty1
 
 /**
  * @author red
@@ -317,6 +319,32 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
+
+
+    private fun showConfirmation(
+        bot: Bot,
+        query: CallbackQuery,
+        performQuery: String,
+        messageReference: KProperty1<Lines, String>
+    ) {
+        val languageCode = query.from.languageCode
+        with(BujoTalk.withLanguage(languageCode)) {
+            bot.sendMessage(
+                ChatId(query.message!!).value,
+                messageReference.get(this),
+                replyMarkup = noYesMarkup(languageCode, performQuery)
+            )
+        }
+    }
+
+    fun showHabitDeleteConfirmation(bot: Bot, query: CallbackQuery, uuid: UUID) {
+        showConfirmation(
+            bot,
+            query,
+            "$CALLBACK_PERFORM_DELETE_HABIT: $uuid",
+            Lines::sureThatWantToDeleteTheHabit
+        )
+    }
 //	fun editAction(message: CallbackMessage) {
 //		launch {
 //			val actorMessage = ActorMessage.Say(message.callBackData)
