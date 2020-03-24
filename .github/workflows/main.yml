@@ -14,25 +14,30 @@ jobs:
       with:
         fetch-depth: 1
 
-    - uses: azure/docker-login@v1
+    - name: Docker login
+      uses: azure/docker-login@v1
       with:
 #        login-server: '<login server>' # default: index.docker.io
         username: ${{ secrets.REGISTRY_USERNAME }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
 
-    - uses: actions/setup-java@v1
+    - name: Prepare java
+      uses: actions/setup-java@v1
       with:
         java-version: 11
 
-    - uses: eskatos/gradle-command-action@v1
+    - name: Build and deploy
+      uses: eskatos/gradle-command-action@v1
       with:
         arguments: dockerTagsPush
 
-    - uses: Azure/k8s-set-context@v1
+    - name: Prepare K8S
+      uses: Azure/k8s-set-context@v1
       with:
         kubeconfig: ${{ secrets.KUBE_CONFIG }}
 
-    - uses: Azure/k8s-deploy@v1
+    - name: Deploy to K8S
+      uses: Azure/k8s-deploy@v1
       with:
-        manifest: deployment/manifest.yaml
+        manifests: deployment/manifest.yaml
     
