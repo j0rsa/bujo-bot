@@ -1,17 +1,19 @@
 name: CI
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout
       uses: actions/checkout@v1
       with:
         fetch-depth: 1
+
     - uses: azure/docker-login@v1
       with:
 #        login-server: '<login server>' # default: index.docker.io
@@ -21,6 +23,16 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: 11
+
     - uses: eskatos/gradle-command-action@v1
       with:
         arguments: dockerTagsPush
+
+    - uses: Azure/k8s-set-context@v1
+      with:
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+    - uses: Azure/k8s-deploy@v1
+      with:
+        manifest: deployment/manifest.yaml
+    
