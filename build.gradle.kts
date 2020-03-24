@@ -62,7 +62,7 @@ tasks {
     }
 }
 
-val hash = Runtime.getRuntime().exec("git rev-parse --short HEAD").inputStream.reader().use { it.readText() }.trim()
+val hash = Runtime.getRuntime().exec("git rev-parse --short=6 HEAD").inputStream.reader().use { it.readText() }.trim()
 val projectTag = hash
 val baseDockerName = "j0rsa/${project.name}"
 val taggedDockerName = "$baseDockerName:$projectTag"
@@ -72,7 +72,7 @@ docker {
     val shadowJar: ShadowJar by tasks
     name = taggedDockerName
     setDockerfile(baseDockerFile)
-    tag("DockerTag", "$baseDockerName:latest")
+    tag("DockerTag", "$baseDockerName:$projectTag")
     @Suppress("UnstableApiUsage")
     buildArgs(mapOf("JAR_FILE" to shadowJar.archiveFileName.get()))
     files(shadowJar.outputs)
