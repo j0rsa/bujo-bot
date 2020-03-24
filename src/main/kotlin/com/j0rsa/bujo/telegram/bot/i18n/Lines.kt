@@ -58,5 +58,6 @@ data class Lines(
     val dayMessage: String,
     val weekMessage: String,
     val quoteMessage: String,
+    val youAreOnStreakMessage: String,
     val addHabitActionButton: String
 )

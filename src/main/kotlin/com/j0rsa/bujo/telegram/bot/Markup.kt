@@ -190,13 +190,13 @@ object Markup {
                     listOf(
                         InlineKeyboardButton(
                             addHabitActionButton,
-                            callbackData = "$CALLBACK_ADD_HABIT_ACTION_BUTTON: ${habit.id}"
+                            callbackData = "$CALLBACK_ADD_HABIT_ACTION_BUTTON: ${habit.id?.value}"
                         )
                     ),
                     listOf(
                         InlineKeyboardButton(
                             deleteButton,
-                            callbackData = "$CALLBACK_DELETE_HABIT_BUTTON: ${habit.id}"
+                            callbackData = "$CALLBACK_DELETE_HABIT_BUTTON: ${habit.id?.value}"
                         )
                     )
                 )
@@ -204,11 +204,11 @@ object Markup {
         }
 
     private fun tagButtons(tags: List<Tag>): List<List<InlineKeyboardButton>> =
-        tags.chunked(3).map {
-            it.map {
+        tags.chunked(3).map { chunk ->
+            chunk.map {
                 InlineKeyboardButton(
-                    "\uD83C\uDFF7${it.name}",
-                    callbackData = "$CALLBACK_SHOW_HABITS_BY_TAG_ID_BUTTON: ${it.id}"
+                    "🏷${it.name}",
+                    callbackData = "$CALLBACK_SHOW_HABITS_BY_TAG_ID_BUTTON: ${it.id?.value}"
                 )
             }
         }

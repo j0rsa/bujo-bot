@@ -299,8 +299,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                         """
                             *$habitMessage:*
                             
-                            *$nameMessage:* ${habit.name}
-                            ${if(streakRow.currentStreak> BigDecimal.ONE) doYouWantToAddValueMessage.format(streakRow.currentStreak) else ""}
+                            *$nameMessage:* ${habit.name}   ${if(streakRow.currentStreak> BigDecimal.ONE) youAreOnStreakMessage.format(streakRow.currentStreak) else ""}
                             *$tagsName:* ${habit.tags.joinToString(separator = " ") { "\uD83C\uDFF7${it.name}" }}
                             *$repetitionsMessage:* ${habit.numberOfRepetitions} / ${when (habit.period) {
                             Period.Week -> weekMessage
