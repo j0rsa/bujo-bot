@@ -75,7 +75,7 @@ class App {
 				}
 				callbackQuery(CALLBACK_CONFIRM_DELETE_HABIT) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
-					val habitId = parse(callbackQuery.data, CALLBACK_VIEW_HABIT)
+					val habitId = parse(callbackQuery.data, CALLBACK_CONFIRM_DELETE_HABIT)
 					callbackQuery.message ?: return@callbackQuery
 					BujoLogic.showHabitDeleteConfirmation(bot, callbackQuery, UUID.fromString(habitId))
 				}
