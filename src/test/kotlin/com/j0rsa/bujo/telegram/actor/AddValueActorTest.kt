@@ -32,7 +32,6 @@ internal class AddValueActorTest : ActorBotTest() {
 	fun testSuccessAddValue() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user.right().toIO()
-			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
@@ -47,13 +46,12 @@ internal class AddValueActorTest : ActorBotTest() {
 			getLocalizedMessage(Lines::addActionValueInitMessage),
 			replyMarkup = valueTypeMarkup("en")
 		)
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage))
+		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage, Lines::orTapSkipMessage, format = "%s\n%s"))
 		verify(bot).sendMessage(
 			chatId,
 			getLocalizedMessage(Lines::addActionValueValueMessage),
 			replyMarkup = defaultValueMarkup()
 		)
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
 		assertThat(actorChannel.isClosedForSend).isTrue()
 	}
 
@@ -74,13 +72,13 @@ internal class AddValueActorTest : ActorBotTest() {
 		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
 		assertThat(actorChannel.isClosedForSend).isFalse()
+		actorChannel.close()
 	}
 
 	@Test
 	fun valueCanNotBeSkipped() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user.right().toIO()
-			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
@@ -91,20 +89,18 @@ internal class AddValueActorTest : ActorBotTest() {
 		actorChannel.send(sayValue())
 
 		verify(client).getUser(userId)
-		verify(client).addValue(user.id, actionId, defaultValue())
 		verify(bot).sendMessage(
 			chatId,
 			getLocalizedMessage(Lines::addActionValueInitMessage),
 			replyMarkup = valueTypeMarkup("en")
 		)
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage))
+		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage, Lines::orTapSkipMessage))
 		verify(bot).sendMessage(
 			chatId,
 			getLocalizedMessage(Lines::addActionValueValueMessage),
 			replyMarkup = defaultValueMarkup()
 		)
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
 		assertThat(actorChannel.isClosedForSend).isTrue()
 	}
 
@@ -112,7 +108,6 @@ internal class AddValueActorTest : ActorBotTest() {
 	fun whenSkipNameThenAddWithDefaultName() = runBlockingTest {
 		val client = mock<Client> {
 			on { getUser(userId) } doReturn user.right().toIO()
-			on { addValue(user.id, actionId, defaultValue()) } doReturn Either.Right(actionId)
 		}
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
@@ -127,14 +122,12 @@ internal class AddValueActorTest : ActorBotTest() {
 			getLocalizedMessage(Lines::addActionValueInitMessage),
 			replyMarkup = valueTypeMarkup("en")
 		)
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage))
+		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueNameMessage, Lines::orTapSkipMessage))
 		verify(bot).sendMessage(
 			chatId,
 			getLocalizedMessage(Lines::addActionValueValueMessage),
 			replyMarkup = defaultValueMarkup()
 		)
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::addActionValueRegistered))
-		verify(client).addValue(user.id, actionId, defaultValue())
 		assertThat(actorChannel.isClosedForSend).isTrue()
 	}
 
@@ -143,6 +136,4 @@ internal class AddValueActorTest : ActorBotTest() {
 	private fun sayValue() = ActorMessage.Say("5")
 
 	private fun defaultValueMarkup() = valueMarkup(defaultType)
-	private fun defaultValue(type: ValueType = defaultType, name: String = defaultName) =
-		Value(type, defaultValue, name)
 }

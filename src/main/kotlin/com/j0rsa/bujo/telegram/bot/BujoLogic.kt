@@ -301,13 +301,15 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                         """
                             *$habitMessage:*
                             
-                            *$nameMessage:* ${habit.name}   ${if(streakRow.currentStreak> BigDecimal.ONE) youAreOnStreakMessage.format(streakRow.currentStreak) else ""}
+                            *$nameMessage:* ${habit.name}   ${if (streakRow.currentStreak > BigDecimal.ONE) youAreOnStreakMessage.format(
+                            streakRow.currentStreak
+                        ) else ""}
                             *$tagsName:* ${habit.tags.joinToString(separator = " ") { "\uD83C\uDFF7${it.name}" }}
                             *$repetitionsMessage:* ${habit.numberOfRepetitions} / ${when (habit.period) {
                             Period.Week -> weekMessage
                             Period.Day -> dayMessage
                         }}
-                            ${if(habit.quote?.isNotEmpty() == true) "*$quoteMessage*: ${habit.quote}" else ""}
+                            ${if (habit.quote?.isNotEmpty() == true) "*$quoteMessage*: ${habit.quote}" else ""}
                         """.trimIndent(),
                         replyMarkup = habitMarkup(query.from.languageCode, habit),
                         parseMode = ParseMode.MARKDOWN
@@ -320,31 +322,61 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     }
 
 
-
     private fun showConfirmation(
         bot: Bot,
         query: CallbackQuery,
         performQuery: String,
-        messageReference: KProperty1<Lines, String>
+        messageReference: KProperty1<Lines, String>,
+        format: ((String) -> String) = { it -> it }
     ) {
         val languageCode = query.from.languageCode
         with(BujoTalk.withLanguage(languageCode)) {
             bot.sendMessage(
                 ChatId(query.message!!).value,
-                messageReference.get(this),
+                messageReference.get(this).let(format),
                 replyMarkup = noYesMarkup(languageCode, performQuery)
             )
         }
     }
 
-    fun showHabitDeleteConfirmation(bot: Bot, query: CallbackQuery, uuid: UUID) {
-        showConfirmation(
-            bot,
-            query,
-            "$CALLBACK_PERFORM_DELETE_HABIT: $uuid",
-            Lines::sureThatWantToDeleteTheHabit
-        )
+    fun showHabitDeleteConfirmation(bot: Bot, query: CallbackQuery, habitId: UUID) {
+        query.from.let { user ->
+            IO.fx {
+                val (trackerUser) = TrackerClient.getUser(BotUserId(user))
+                val (habitInfo) = TrackerClient.getHabit(trackerUser.id, HabitId(habitId))
+                showConfirmation(
+                    bot,
+                    query,
+                    "$CALLBACK_PERFORM_DELETE_HABIT: $habitId",
+                    Lines::sureThatWantToDeleteTheHabit
+                ) { it.format(habitInfo.habit.name) }
+            }.handleError {
+                BujoBot(bot).sendGenericError(ChatId(query.message!!), user.languageCode)
+            }.unsafeRunSync()
+        }
+
     }
+
+    fun deleteHabit(bot: Bot, query: CallbackQuery, habitId: UUID) {
+        val languageCode = query.from.languageCode
+        with(BujoTalk.withLanguage(languageCode)) {
+            IO.fx {
+                val (user) = TrackerClient.getUser(BotUserId(query.from))
+                val habitIdObject = HabitId(habitId)
+                val (removedHabit) = TrackerClient.deleteHabit(user.id, habitIdObject)
+                bot.sendMessage(
+                    ChatId(query.message!!).value,
+                    habitDeletedMessage.format("**${removedHabit.habit.name}**")
+                )
+            }.handleError {
+                bot.sendMessage(
+                    ChatId(query.message!!).value,
+                    habitNotDeletedMessage
+                )
+            }.unsafeRunSync()
+        }
+    }
+
 //	fun editAction(message: CallbackMessage) {
 //		launch {
 //			val actorMessage = ActorMessage.Say(message.callBackData)
@@ -358,7 +390,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 sealed class BotMessage(
     val bot: BujoBot,
     private val chatId: ChatId,
-    val userId: BotUserId
+    private val userId: BotUserId
 ) {
     class CallbackMessage(
         bot: BujoBot,

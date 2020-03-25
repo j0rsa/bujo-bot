@@ -38,7 +38,7 @@ class CreateActionActorTest : ActorBotTest() {
 		actorChannel.send(sayTags())
 
 		verify(client).getUser(userId)
-		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::actionCreationInitMessage))
+		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::actionCreationInitMessage, Lines::actionCreationDescriptionInput, format = "%s\n%s"))
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::actionCreationTagsInput))
 		assertThat(actorChannel.isClosedForSend).isTrue()
 	}

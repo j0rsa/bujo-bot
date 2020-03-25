@@ -84,6 +84,13 @@ class App {
 					val message = callbackQuery.message ?: return@callbackQuery
 					deleteMessage(bot, message)
 				}
+				callbackQuery(CALLBACK_PERFORM_DELETE_HABIT) { bot, update ->
+					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+					val message = callbackQuery.message ?: return@callbackQuery
+					val habitId = parse(callbackQuery.data, CALLBACK_PERFORM_DELETE_HABIT)
+					deleteMessage(bot, message)
+					BujoLogic.deleteHabit(bot, callbackQuery, UUID.fromString(habitId))
+				}
 //				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
 //					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 //					val message = callbackQuery.message ?: return@callbackQuery

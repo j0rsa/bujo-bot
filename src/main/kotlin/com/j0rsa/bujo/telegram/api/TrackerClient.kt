@@ -10,6 +10,7 @@ import com.j0rsa.bujo.telegram.Config
 import com.j0rsa.bujo.telegram.api.RequestLens.actionIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionRequestLens
+import com.j0rsa.bujo.telegram.api.RequestLens.habitActionRequestLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitInfoLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitRequestLens
@@ -37,7 +38,7 @@ import org.slf4j.LoggerFactory.getLogger
 
 object TrackerClient : Client {
     private val logger = getLogger(this::class.java.name)
-    var httpLogging = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
+    private var httpLogging = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
         override fun log(message: String) {
             logger.debug(message)
         }
@@ -76,6 +77,9 @@ object TrackerClient : Client {
     override fun getHabit(userId: UserId, habitId: HabitId): IO<HabitInfoView> =
         habitInfoLens(client("/habits/${habitId.value}".get().with(userId))).toIO()
 
+    override fun deleteHabit(userId: UserId, habitId: HabitId): IO<HabitInfoView> =
+        habitInfoLens(client("/habits/${habitId.value}".delete().with(userId))).toIO()
+
     override fun createHabit(userId: UserId, habit: HabitRequest): Either<BotError, HabitId> =
         with(client(habitRequestLens(habit, "/habits".post().with(userId)))) {
             when (status) {
@@ -86,6 +90,14 @@ object TrackerClient : Client {
 
     override fun createAction(userId: UserId, actionRequest: ActionRequest): Either<BotError, ActionId> =
         with(client(actionRequestLens(actionRequest, "/actions".post().with(userId)))) {
+            return when (status) {
+                Status.OK, Status.CREATED -> actionIdLens(this).toBotEither().right()
+                else -> NotCreated.left()
+            }.flatten()
+        }
+
+    fun createHabitAction(userId: UserId, habitId: HabitId, actionRequest: HabitActionRequest): Either<BotError, ActionId> =
+        with(client(habitActionRequestLens(actionRequest, "/actions/habit/${habitId.value}".post().with(userId)))) {
             return when (status) {
                 Status.OK, Status.CREATED -> actionIdLens(this).toBotEither().right()
                 else -> NotCreated.left()
@@ -117,6 +129,9 @@ object TrackerClient : Client {
 
     private fun String.post() =
         Request(Method.POST, Uri.of(Config.app.tracker.url).path(this))
+
+    private fun String.delete() =
+        Request(Method.DELETE, Uri.of(Config.app.tracker.url).path(this))
 
     private fun <T> Either<Exception, T>.toBotEither(): Either<BotError, T> =
         this.mapLeft { BotError.SystemError(it.message ?: "Unknown error") }

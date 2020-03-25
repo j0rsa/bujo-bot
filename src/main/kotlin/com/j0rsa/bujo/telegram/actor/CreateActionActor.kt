@@ -22,7 +22,7 @@ data class CreateActionState(
 object CreateActionActor : StateMachineActor<CreateActionState>(
 	mandatoryStep(
 		{
-			sendLocalizedMessage(state, Lines::actionCreationInitMessage)
+			sendLocalizedMessage(state, listOf(Lines::actionCreationInitMessage, Lines::actionCreationDescriptionInput))
 		}, {
 			state.actionDescription = message.text
 			true

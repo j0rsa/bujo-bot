@@ -22,6 +22,7 @@ object RequestLens {
     val actionLens = Body.auto<Action>().toLens().toEither()
     val actionIdLens = Body.auto<ActionId>().toLens().toEither()
     val actionRequestLens = Body.auto<ActionRequest>().toLens()
+    val habitActionRequestLens = Body.auto<HabitActionRequest>().toLens()
     val valueRequestLens = Body.auto<Value>().toLens()
     val multipleActionLens = Body.auto<List<Action>>().toLens()
     val telegramUserIdLens = Body.auto<UserId>().toLens()

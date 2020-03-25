@@ -30,8 +30,14 @@ open class ActorBotTest {
     fun TestCoroutineScope.actorContext(client: Client) =
         ActorContext(chatId, userId, bot, this, client)
 
-    protected fun getLocalizedMessage(line: KProperty1<Lines, String>): String =
-        line.get(BujoTalk.withLanguage(user.language))
+    protected fun getLocalizedMessage(
+        vararg lines: KProperty1<Lines, String>,
+        format: String = lines.joinToString(separator = "\n") { "%s" }
+    ): String =
+        format.format(*
+        lines.map { line -> line.get(BujoTalk.withLanguage(user.language))}
+            .toTypedArray()
+        )
 
     protected fun skip() = ActorMessage.Skip
 }

@@ -15,6 +15,12 @@ data class ActionRequest(
 	val tags: List<TagRequest>
 )
 
+data class HabitActionRequest(
+	val description: String,
+	val tags: List<TagRequest>,
+	val values: List<Value> = emptyList()
+)
+
 data class Action(
     val description: String,
     val tags: List<Tag>,
