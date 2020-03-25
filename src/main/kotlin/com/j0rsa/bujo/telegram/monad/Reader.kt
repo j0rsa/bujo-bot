@@ -43,9 +43,14 @@ interface Client {
 	fun getHabits(userId: UserId): IO<List<HabitsInfo>>
 	fun getUser(telegramUserId: BotUserId): IO<TrackerUser>
 	fun getHabit(userId: UserId, habitId: HabitId): IO<HabitInfoView>
-	fun deleteHabit(userId: UserId, habitId: HabitId): IO<HabitInfoView>
+	fun deleteHabit(userId: UserId, habitId: HabitId): Either<BotError, Unit>
 	fun createAction(userId: UserId, actionRequest: ActionRequest): Either<BotError, ActionId>
 	fun addValue(userId: UserId, actionId: ActionId, value: Value): Either<BotError, ActionId>
 	fun getAction(userId: UserId, actionId: ActionId): Either<BotError, Action>
 	fun createHabit(userId: UserId, habit: HabitRequest): Either<BotError, HabitId>
+	fun createHabitAction(
+		userId: UserId,
+		habitId: HabitId,
+		actionRequest: HabitActionRequest
+	): Either<BotError, ActionId>
 }

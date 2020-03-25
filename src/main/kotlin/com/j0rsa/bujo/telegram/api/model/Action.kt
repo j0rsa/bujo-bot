@@ -32,7 +32,7 @@ data class Action(
 data class Value(
 	val type: ValueType,
 	val value: String?,
-	val name: String?
+	val name: String? = null
 )
 
 enum class ValueType(val caption: KProperty1<Lines, String>) {

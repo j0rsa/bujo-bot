@@ -2,6 +2,7 @@ package com.j0rsa.bujo.telegram.bot
 
 import arrow.fx.IO
 import arrow.fx.extensions.fx
+import arrow.fx.extensions.toIO
 import arrow.fx.handleError
 import com.j0rsa.bujo.telegram.Config
 import com.j0rsa.bujo.telegram.actor.*
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
 import org.http4k.core.Status
+import java.lang.IllegalStateException
 import java.math.BigDecimal
 import java.util.*
 import kotlin.reflect.KProperty1
@@ -259,7 +261,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     private fun initNewActor(
         bot: BujoBot,
         update: Update,
-        init: (user: User, trackerUser: TrackerUser, message: Message, ctx: ActorContext) -> SendChannel<ActorMessage>
+        init: (user: User, trackerUser: TrackerUser, message: Message, ctx: ActorContext) -> SendChannel<ActorMessage>?
     ) {
         (update.message ?: update.callbackQuery?.message)?.let { message ->
             (update.callbackQuery?.from ?: message.from)?.let { user: User ->
@@ -273,12 +275,17 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     )
                     actorContext.client.getUser(actorContext.userId)
                         .map { trackerUser ->
-                            userActors[userId] = init(
+                            val initResult = init(
                                 user,
                                 trackerUser,
                                 message,
                                 actorContext
                             )
+                            if (initResult != null) {
+                                userActors[userId] = initResult
+                            } else {
+                                bot.sendGenericError(actorContext.chatId, user.languageCode)
+                            }
                         }
                         .handleError {
                             bot.sendGenericError(actorContext.chatId, user.languageCode)
@@ -310,6 +317,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                             Period.Day -> dayMessage
                         }}
                             ${if (habit.quote?.isNotEmpty() == true) "*$quoteMessage*: ${habit.quote}" else ""}
+                            ${habitValueTemplateNames(habit.values, user.languageCode)}
                         """.trimIndent(),
                         replyMarkup = habitMarkup(query.from.languageCode, habit),
                         parseMode = ParseMode.MARKDOWN
@@ -321,6 +329,10 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
+    private fun habitValueTemplateNames(values: List<ValueTemplate>, language: String?): String =
+        values.map { template ->
+            template.name ?: template.type.caption.get(BujoTalk.withLanguage(language))
+        }.joinToString(separator = " ") { "🔎$it" }
 
     private fun showConfirmation(
         bot: Bot,
@@ -363,10 +375,12 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
             IO.fx {
                 val (user) = TrackerClient.getUser(BotUserId(query.from))
                 val habitIdObject = HabitId(habitId)
-                val (removedHabit) = TrackerClient.deleteHabit(user.id, habitIdObject)
+                val (habitInfo) = TrackerClient.getHabit(user.id, habitIdObject)
+                TrackerClient.deleteHabit(user.id, habitIdObject).toIO{ IllegalStateException(it.toString()) }.bind()
                 bot.sendMessage(
                     ChatId(query.message!!).value,
-                    habitDeletedMessage.format("**${removedHabit.habit.name}**")
+                    habitDeletedMessage.format("**${habitInfo.habit.name}**"),
+                    parseMode = ParseMode.MARKDOWN
                 )
             }.handleError {
                 bot.sendMessage(
@@ -374,6 +388,38 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     habitNotDeletedMessage
                 )
             }.unsafeRunSync()
+        }
+    }
+
+    fun addFastHabitActionFromQuery(bot: Bot, update: Update, habitId: UUID) {
+        val habitIdObject = HabitId(habitId)
+        initNewActor(BujoBot(bot), update) { user, trackerUser, _, ctx ->
+            IO.fx {
+                val (habitInfo) = TrackerClient.getHabit(trackerUser.id, habitIdObject)
+                val habit = habitInfo.habit
+                AddFastValueListActor.yield(
+                    AddFastValueListState(ctx, trackerUser, habit.values)
+                ) {
+                    cause ?: with(state) {
+                        ctx.client.createHabitAction(
+                            trackerUser.id,
+                            habitIdObject,
+                            HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), values)
+                        ).fold(
+                            {
+                                !sendLocalizedMessage(
+                                    state,
+                                    Lines::actionNotRegisteredMessage
+                                )
+                            },
+                            {
+                                sendLocalizedMessage(state, Lines::actionRegisteredMessage)
+                            })
+                    }
+                    userActors.remove(BotUserId(user))
+                }
+            }.handleError { null }
+                .unsafeRunSync()
         }
     }
 
@@ -411,11 +457,14 @@ class HandleActorMessage(
 private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButton>> =
     this.map { habitsInfo ->
         val streakCaption = if (habitsInfo.currentStreak > BigDecimal.ONE) " 🎯: ${habitsInfo.currentStreak}" else ""
-        val habitCaption = "${habitsInfo.habit.name}$streakCaption"
+        val habit = habitsInfo.habit
+
+        val habitCaption = "${habit.name}$streakCaption"
         listOf(
-            InlineKeyboardButton("◻️" or "✅️", callbackData = "asd"),
-            InlineKeyboardButton(habitCaption, callbackData = "$CALLBACK_VIEW_HABIT: ${habitsInfo.habit.id?.value}")
+            InlineKeyboardButton("◻️", callbackData = "$CALLBACK_ADD_FAST_HABIT_ACTION_BUTTON: ${habit.id?.value}"),
+            InlineKeyboardButton(habitCaption, callbackData = "$CALLBACK_VIEW_HABIT: ${habit.id?.value}")
         )
     }
 
+//"✅️"
 private infix fun String.or(other: String) = if (Math.random() < 0.5) this else other

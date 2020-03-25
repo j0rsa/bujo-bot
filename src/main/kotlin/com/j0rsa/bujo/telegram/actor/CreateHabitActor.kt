@@ -1,13 +1,10 @@
 package com.j0rsa.bujo.telegram.actor
 
+import com.j0rsa.bujo.telegram.actor.common.*
 import com.j0rsa.bujo.telegram.bot.BujoLogic
 import com.j0rsa.bujo.telegram.bot.Markup.periodMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.valueTypeMarkup
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
-import com.j0rsa.bujo.telegram.actor.common.ActorState
-import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
-import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
-import com.j0rsa.bujo.telegram.actor.common.optionalStep
 import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.monad.ActorContext
 import java.time.LocalDateTime
@@ -92,14 +89,14 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 			valueTypeMarkup(state.trackerUser.language)
 		)
 	}, {
-		if (state.subActor == null) {
+		if (state.subActor == DummyChannel) {
 			val superState = state
-			state.subActor = ValueTemplateActor()
+			state.subActor = ValueTemplateActor
 				.yield(ValueTemplateState(state.ctx, state.trackerUser, ValueType.valueOf(message.text))) {
 					superState.values.add(
 						ValueTemplate(state.type, state.name)
 					)
-					superState.subActor = null
+					superState.subActor = DummyChannel
 					sendLocalizedMessage(
 						state,
 						listOf(
@@ -111,7 +108,7 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 					)
 				}
 		} else {
-			BujoLogic.handleSayActorMessage(message.text, state.subActor!!)
+			BujoLogic.handleSayActorMessage(message.text, state.subActor)
 		}
 		false
 	})

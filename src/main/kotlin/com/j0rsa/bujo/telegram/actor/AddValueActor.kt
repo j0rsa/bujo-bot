@@ -30,10 +30,10 @@ object AddValueActor : StateMachineActor<AddValueState>(
 		} catch (e: Exception) {
 			return@mandatoryStep false
 		}
-		state.name = state.type.name
 		true
 	}),
 	optionalStep({
+		state.name = state.type.name
 		sendLocalizedMessage(state, listOf(Lines::addActionValueNameMessage, Lines::orTapSkipMessage))
 	}, {
 		state.name = message.text

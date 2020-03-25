@@ -20,7 +20,7 @@ data class ValueTemplateState(
     var name: String? = null
 ) : ActorState(ctx, trackerUser)
 
-class ValueTemplateActor : StateMachineActor<ValueTemplateState>(
+object ValueTemplateActor : StateMachineActor<ValueTemplateState>(
 //    mandatoryStep({
 //        sendLocalizedMessage(state, Lines::chooseTemplateValueTypeMessage)
 //    }, {

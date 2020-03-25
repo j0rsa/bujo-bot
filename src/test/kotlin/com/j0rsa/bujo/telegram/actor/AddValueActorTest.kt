@@ -1,6 +1,5 @@
 package com.j0rsa.bujo.telegram.actor
 
-import arrow.core.Either
 import arrow.core.right
 import arrow.fx.extensions.toIO
 import assertk.assertThat
@@ -11,7 +10,6 @@ import com.j0rsa.bujo.telegram.bot.Markup.valueMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.valueTypeMarkup
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
-import com.j0rsa.bujo.telegram.api.model.Value
 import com.j0rsa.bujo.telegram.api.model.ValueType
 import com.j0rsa.bujo.telegram.monad.Client
 import com.nhaarman.mockitokotlin2.doReturn

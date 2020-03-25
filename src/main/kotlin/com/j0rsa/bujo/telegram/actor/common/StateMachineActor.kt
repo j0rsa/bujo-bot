@@ -1,12 +1,14 @@
 package com.j0rsa.bujo.telegram.actor.common
 
+import com.j0rsa.bujo.telegram.api.model.TrackerUser
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
-import com.j0rsa.bujo.telegram.api.model.TrackerUser
 import com.j0rsa.bujo.telegram.monad.ActorContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
+import kotlinx.coroutines.selects.SelectClause2
 import me.ivmg.telegram.entities.ReplyMarkup
 import org.slf4j.LoggerFactory
 import kotlin.reflect.KProperty1
@@ -64,18 +66,21 @@ open class StateMachineActor<T : ActorState>(
         }
 }
 
-data class StateWithLocalization<T>(val state: T, val cause: Throwable?) : Localized
+data class StateWithLocalization<T>(val state: T, val cause: Throwable?) : Localized {
+    val logger = LoggerFactory.getLogger(this::class.java.name)
+}
 
 interface Localized {
     fun sendLocalizedMessage(
         state: ActorState,
         line: KProperty1<Lines, String>,
-        replyMarkup: ReplyMarkup? = null
+        replyMarkup: ReplyMarkup? = null,
+        formatValues: List<String> = emptyList()
     ): Boolean =
         with(state) {
             ctx.bot.sendMessage(
                 chatId = ctx.chatId,
-                text = line.get(BujoTalk.withLanguage(trackerUser.language)),
+                text = line.get(BujoTalk.withLanguage(trackerUser.language)).format(*formatValues.toTypedArray()),
                 replyMarkup = replyMarkup
             ).let { true }
         }
@@ -97,8 +102,29 @@ interface Localized {
 abstract class ActorState(
     open val ctx: ActorContext,
     open val trackerUser: TrackerUser,
-    var subActor: SendChannel<ActorMessage>? = null
+    var subActor: SendChannel<ActorMessage> = DummyChannel
 )
+
+object DummyChannel : SendChannel<ActorMessage> {
+    @ExperimentalCoroutinesApi
+    override val isClosedForSend: Boolean
+        get() = true
+
+    override suspend fun send(element: ActorMessage) {}
+
+    @ExperimentalCoroutinesApi
+    override val isFull: Boolean
+        get() = true
+    override val onSend: SelectClause2<ActorMessage, SendChannel<ActorMessage>>
+        get() = TODO("Not yet implemented")
+
+    override fun close(cause: Throwable?): Boolean = true
+
+    @ExperimentalCoroutinesApi
+    override fun invokeOnClose(handler: (cause: Throwable?) -> Unit) { handler(null) }
+    override fun offer(element: ActorMessage): Boolean = true
+
+}
 
 sealed class ActorStep<in T : ActorState>(
     private val setup: StepSetupDefinition<T>.() -> Boolean,
@@ -134,5 +160,6 @@ fun <T : ActorState> mandatoryStep(
 ) =
     MandatoryStep(setup, action)
 
-data class StepSetupDefinition<out T : ActorState>(val state: T) : Localized
-data class StepActionDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say) : Localized
+interface Step<out T> : Localized
+data class StepSetupDefinition<out T : ActorState>(val state: T) : Step<T>
+data class StepActionDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say) : Step<T>

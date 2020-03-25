@@ -77,8 +77,11 @@ object TrackerClient : Client {
     override fun getHabit(userId: UserId, habitId: HabitId): IO<HabitInfoView> =
         habitInfoLens(client("/habits/${habitId.value}".get().with(userId))).toIO()
 
-    override fun deleteHabit(userId: UserId, habitId: HabitId): IO<HabitInfoView> =
-        habitInfoLens(client("/habits/${habitId.value}".delete().with(userId))).toIO()
+    override fun deleteHabit(userId: UserId, habitId: HabitId): Either<BotError, Unit> =
+        when(val status = client("/habits/${habitId.value}".delete().with(userId)).status) {
+            Status.OK, Status.NO_CONTENT -> Either.right(Unit)
+            else -> Either.left(BotError.SystemError(status.code.toString()))
+        }
 
     override fun createHabit(userId: UserId, habit: HabitRequest): Either<BotError, HabitId> =
         with(client(habitRequestLens(habit, "/habits".post().with(userId)))) {
@@ -96,7 +99,7 @@ object TrackerClient : Client {
             }.flatten()
         }
 
-    fun createHabitAction(userId: UserId, habitId: HabitId, actionRequest: HabitActionRequest): Either<BotError, ActionId> =
+    override fun createHabitAction(userId: UserId, habitId: HabitId, actionRequest: HabitActionRequest): Either<BotError, ActionId> =
         with(client(habitActionRequestLens(actionRequest, "/actions/habit/${habitId.value}".post().with(userId)))) {
             return when (status) {
                 Status.OK, Status.CREATED -> actionIdLens(this).toBotEither().right()

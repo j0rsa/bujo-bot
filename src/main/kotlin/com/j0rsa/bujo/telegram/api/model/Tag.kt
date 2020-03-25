@@ -17,8 +17,10 @@ data class TagRequest(
 
 data class Tag(
     val name: String = "",
-    val id: TagId? = null
-)
+    val id: TagId = TagId.randomValue()
+) {
+    fun toTagRequest() = TagRequest(name)
+}
 
 inline class TagId(val value: UUID) {
     companion object {

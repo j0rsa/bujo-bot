@@ -29,6 +29,7 @@ data class Habit(
     val quote: String? = null,
     val bad: Boolean? = false,
     val startFrom: ZonedDateTime? = null,
+    val values: List<ValueTemplate> = emptyList(),
     val id: HabitId? = null
 )
 
