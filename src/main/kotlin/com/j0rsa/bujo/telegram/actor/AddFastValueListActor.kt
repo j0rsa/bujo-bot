@@ -21,29 +21,34 @@ object AddFastValueListActor : StateMachineActor<AddFastValueListState>(
         true
     }, {
         if (state.subActor != DummyChannel) BujoLogic.handleSayActorMessage(message.text, state.subActor)
-        Thread.sleep(1000)
+        // TODO: try to make it async and remove the sleep
+        if (state.values.size >= state.templates.size - 1) Thread.sleep(1000)
         state.subActor == DummyChannel
     })
 )
 
-fun initChain(superState: AddFastValueListState, currentTemplate: ValueTemplate?, templates: List<ValueTemplate>): SendChannel<ActorMessage> {
+fun initChain(
+    superState: AddFastValueListState,
+    currentTemplate: ValueTemplate?,
+    templates: List<ValueTemplate>
+): SendChannel<ActorMessage> {
     return if (currentTemplate == null) DummyChannel else
-    AddFastValueActor
-        .yield(
-            AddFastValueState(
-                superState.ctx,
-                superState.trackerUser,
-                currentTemplate.type,
-                currentTemplate.name
-            )
-        ) {
-            logger.info("Received a value with type: ${state.name}(${state.type}) and value: ${state.value}")
-            superState.values.add(
-                Value(
-                    state.type,
-                    state.value
+        AddFastValueActor
+            .yield(
+                AddFastValueState(
+                    superState.ctx,
+                    superState.trackerUser,
+                    currentTemplate.type,
+                    currentTemplate.name
                 )
-            )
-            superState.subActor = initChain(superState, templates.firstOrNull(), templates.drop(1))
-        }
+            ) {
+                logger.info("Received a value with type: ${state.name}(${state.type}) and value: ${state.value}")
+                superState.values.add(
+                    Value(
+                        state.type,
+                        state.value
+                    )
+                )
+                superState.subActor = initChain(superState, templates.firstOrNull(), templates.drop(1))
+            }
 }
