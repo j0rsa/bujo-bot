@@ -23,6 +23,7 @@ data class HabitRequest(
 
 data class Habit(
     val name: String = "",
+    val done: Boolean = false,
     val tags: List<Tag> = emptyList(),
     val numberOfRepetitions: Int = 0,
     val period: Period = Period.Day,

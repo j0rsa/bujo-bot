@@ -1,8 +1,10 @@
 package com.j0rsa.bujo.telegram.bot
 
 import com.j0rsa.bujo.telegram.api.model.*
+import com.j0rsa.bujo.telegram.bot.Markup.toHabitsInlineKeys
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import me.ivmg.telegram.entities.*
+import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
@@ -211,6 +213,26 @@ object Markup {
                     callbackData = "$CALLBACK_SHOW_HABITS_BY_TAG_ID_BUTTON: ${it.id?.value}"
                 )
             }
+        }
+
+    fun habitListMarkup(habits: List<HabitsInfo>) = InlineKeyboardMarkup(
+        habits.toHabitsInlineKeys()
+    )
+
+    private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButton>> =
+        this.map { habitsInfo ->
+            val streakCaption = if (habitsInfo.currentStreak > BigDecimal.ONE) " 🎯: ${habitsInfo.currentStreak}" else ""
+            val habit = habitsInfo.habit
+
+            val habitCaption = "${habit.name}$streakCaption"
+            listOfNotNull(
+                if (!habit.done)
+                    InlineKeyboardButton("◻️", callbackData = "$CALLBACK_ADD_FAST_HABIT_ACTION_BUTTON: ${habit.id?.value}")
+                else
+                    InlineKeyboardButton("✅️", callbackData = "$CALLBACK_VIEW_HABIT: ${habit.id?.value}")
+                ,
+                InlineKeyboardButton(habitCaption, callbackData = "$CALLBACK_VIEW_HABIT: ${habit.id?.value}")
+            )
         }
 
     private const val TODO_TEMPLATE = "todo"

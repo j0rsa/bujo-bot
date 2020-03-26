@@ -12,6 +12,7 @@ import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.habitCreatedMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.habitListMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.habitMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.newHabitMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.noYesMarkup
@@ -29,7 +30,6 @@ import kotlinx.coroutines.launch
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
 import org.http4k.core.Status
-import java.lang.IllegalStateException
 import java.math.BigDecimal
 import java.util.*
 import kotlin.reflect.KProperty1
@@ -157,9 +157,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                             bot.sendMessage(
                                 message.chat.id,
                                 text = showHabitsMessage,
-                                replyMarkup = InlineKeyboardMarkup(
-                                    habits.toHabitsInlineKeys()
-                                )
+                                replyMarkup = habitListMarkup(habits)
                             )
                         }
                     }
@@ -376,7 +374,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 val (user) = TrackerClient.getUser(BotUserId(query.from))
                 val habitIdObject = HabitId(habitId)
                 val (habitInfo) = TrackerClient.getHabit(user.id, habitIdObject)
-                TrackerClient.deleteHabit(user.id, habitIdObject).toIO{ IllegalStateException(it.toString()) }.bind()
+                TrackerClient.deleteHabit(user.id, habitIdObject).toIO { IllegalStateException(it.toString()) }.bind()
                 bot.sendMessage(
                     ChatId(query.message!!).value,
                     habitDeletedMessage.format("**${habitInfo.habit.name}**"),
@@ -455,17 +453,4 @@ class HandleActorMessage(
     val text: String
 )
 
-private fun List<HabitsInfo>.toHabitsInlineKeys(): List<List<InlineKeyboardButton>> =
-    this.map { habitsInfo ->
-        val streakCaption = if (habitsInfo.currentStreak > BigDecimal.ONE) " 🎯: ${habitsInfo.currentStreak}" else ""
-        val habit = habitsInfo.habit
-
-        val habitCaption = "${habit.name}$streakCaption"
-        listOf(
-            InlineKeyboardButton("◻️", callbackData = "$CALLBACK_ADD_FAST_HABIT_ACTION_BUTTON: ${habit.id?.value}"),
-            InlineKeyboardButton(habitCaption, callbackData = "$CALLBACK_VIEW_HABIT: ${habit.id?.value}")
-        )
-    }
-
-//"✅️"
 private infix fun String.or(other: String) = if (Math.random() < 0.5) this else other
