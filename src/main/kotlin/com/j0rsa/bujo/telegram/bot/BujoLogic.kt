@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
 import org.http4k.core.Status
+import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.util.*
 import kotlin.reflect.KProperty1
@@ -41,6 +42,7 @@ import kotlin.reflect.KProperty1
 
 @OptIn(ExperimentalCoroutinesApi::class)
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
+    private val logger = LoggerFactory.getLogger(this::class.java.name)
     private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
     fun checkBackendStatus(bot: Bot, message: Message) {
         val text = if (TrackerClient.health()) {
@@ -162,6 +164,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                         }
                     }
                 }.handleError {
+                    logger.error("IO error: $it")
                     BujoBot(bot).sendGenericError(ChatId(message), user.languageCode)
                 }.unsafeRunSync()
             }
@@ -176,6 +179,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 cause ?: with(state) {
                     ctx.client.createAction(trackerUser.id, ActionRequest(actionDescription, tags)).fold(
                         {
+                            BujoLogic.logger.error("IO error: $it")
                             !sendLocalizedMessage(
                                 state,
                                 Lines::actionNotRegisteredMessage
@@ -207,6 +211,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 with(state) {
                     ctx.client.addValue(trackerUser.id, actionId, Value(type, value, name)).fold(
                         {
+                            BujoLogic.logger.error("IO error: $it")
                             !sendLocalizedMessage(state, Lines::addActionValueNotRegistered)
                         },
                         {
@@ -239,6 +244,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                         HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
                     ctx.client.createHabit(trackerUser.id, habitRequest).fold(
                         {
+                            BujoLogic.logger.error("IO error: $it")
                             !sendLocalizedMessage(
                                 this,
                                 Lines::habitNotRegisteredMessage
@@ -286,6 +292,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                             }
                         }
                         .handleError {
+                            logger.error("IO error: $it")
                             bot.sendGenericError(actorContext.chatId, user.languageCode)
                         }.unsafeRunSync()
 
@@ -299,16 +306,15 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
             IO.fx {
                 val (trackerUser) = TrackerClient.getUser(BotUserId(user))
                 val (habitInfo) = TrackerClient.getHabit(trackerUser.id, HabitId(habitId))
-                val (habit, streakRow) = habitInfo
+                val (habit, _, streakRow) = habitInfo
                 with(BujoTalk.withLanguage(user.languageCode)) {
                     bot.sendMessage(
                         ChatId(query.message!!).value,
                         """
                             *$habitMessage:*
                             
-                            *$nameMessage:* ${habit.name}   ${if (streakRow.currentStreak > BigDecimal.ONE) youAreOnStreakMessage.format(
-                            streakRow.currentStreak
-                        ) else ""}
+                            *$nameMessage:* ${habit.name}   
+                            ${if (streakRow.currentStreak > BigDecimal.ONE) "*${youAreOnStreakMessage.format(streakRow.currentStreak.toInt())}* \uD83C\uDF89" else ""}
                             *$tagsName:* ${habit.tags.joinToString(separator = " ") { "\uD83C\uDFF7${it.name}" }}
                             *$repetitionsMessage:* ${habit.numberOfRepetitions} / ${when (habit.period) {
                             Period.Week -> weekMessage
@@ -322,6 +328,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     )
                 }
             }.handleError {
+                logger.error("IO error: $it")
                 BujoBot(bot).sendGenericError(ChatId(query.message!!), user.languageCode)
             }.unsafeRunSync()
         }
@@ -361,6 +368,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     Lines::sureThatWantToDeleteTheHabit
                 ) { it.format(habitInfo.habit.name) }
             }.handleError {
+                logger.error("IO error: $it")
                 BujoBot(bot).sendGenericError(ChatId(query.message!!), user.languageCode)
             }.unsafeRunSync()
         }
@@ -381,6 +389,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     parseMode = ParseMode.MARKDOWN
                 )
             }.handleError {
+                logger.error("IO error: $it")
                 bot.sendMessage(
                     ChatId(query.message!!).value,
                     habitNotDeletedMessage
@@ -417,7 +426,10 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                     }
                     userActors.remove(BotUserId(user))
                 }
-            }.handleError { null }
+            }.handleError {
+                logger.error("IO error: $it")
+                null
+            }
                 .unsafeRunSync()
         }
     }

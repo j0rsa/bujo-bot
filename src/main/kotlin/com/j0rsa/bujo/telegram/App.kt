@@ -49,6 +49,10 @@ class App {
 						HandleActorMessage(userId, ChatId(message), text)
 					)
 				}
+				callbackQuery("") { bot, update ->
+					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+					logger.debug("Received callback: ${callbackQuery.data}")
+				}
 				callbackQuery(CALLBACK_ADD_VALUE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					val message = callbackQuery.message ?: return@callbackQuery
@@ -107,6 +111,7 @@ class App {
 			}
 		}
 		bot.startPolling()
+		logger.info("Bot started listening for updates")
 	}
 
 //	private fun editActionCallback(callbackQuery: CallbackQuery, message: Message, bot: Bot) {

@@ -1,12 +1,24 @@
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <!-- encoders are assigned the type
-             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <appender name="COLOR" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%cyan([%date]) %highlight([%level]) [%logger{10} %file:%line] %msg%n</pattern>
+            <!--             ^^^^^^^^^^ -->
+        </encoder>
+    </appender>
+    <appender name="NOCOLOR" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>[%date] [%level] [%logger{10} %file:%line] %msg%n</pattern>
         </encoder>
     </appender>
     <root level="${LOG_LEVEL:-INFO}">
-        <appender-ref ref="STDOUT" />
+        <!-- to use enable this mode pass -Dcolor to jvm -->
+        <if condition='isDefined("color")'>
+            <then>
+                <appender-ref ref="COLOR"/>
+            </then>
+            <else>
+                <appender-ref ref="NOCOLOR"/>
+            </else>
+        </if>
     </root>
 </configuration>

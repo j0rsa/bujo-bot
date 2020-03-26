@@ -27,6 +27,8 @@ object Versions {
     const val docker = "0.24.0"
     const val shadow = "5.2.0"
 
+    const val janino = "3.0.6"
+
     /* test */
     const val junit = "4.12"
 }
@@ -43,6 +45,8 @@ object Libs {
     const val arrowFx = "io.arrow-kt:arrow-fx:${Versions.arrow}"
     const val arrowSyntax = "io.arrow-kt:arrow-syntax:${Versions.arrow}"
     const val arrowMeta = "io.arrow-kt:arrow-meta:${Versions.arrow}"
+    // logback conditions
+    const val janino = "org.codehaus.janino:janino:${Versions.janino}"
 }
 
 

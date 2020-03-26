@@ -210,7 +210,7 @@ object Markup {
             chunk.map {
                 InlineKeyboardButton(
                     "🏷${it.name}",
-                    callbackData = "$CALLBACK_SHOW_HABITS_BY_TAG_ID_BUTTON: ${it.id?.value}"
+                    callbackData = "$CALLBACK_SHOW_HABITS_BY_TAG_ID_BUTTON: ${it.id.value}"
                 )
             }
         }
@@ -224,9 +224,9 @@ object Markup {
             val streakCaption = if (habitsInfo.currentStreak > BigDecimal.ONE) " 🎯: ${habitsInfo.currentStreak}" else ""
             val habit = habitsInfo.habit
 
-            val habitCaption = "${habit.name}$streakCaption"
+            val habitCaption = "\uD83C\uDFC3${habit.name}$streakCaption"
             listOfNotNull(
-                if (!habit.done)
+                if (!habitsInfo.done)
                     InlineKeyboardButton("◻️", callbackData = "$CALLBACK_ADD_FAST_HABIT_ACTION_BUTTON: ${habit.id?.value}")
                 else
                     InlineKeyboardButton("✅️", callbackData = "$CALLBACK_VIEW_HABIT: ${habit.id?.value}")

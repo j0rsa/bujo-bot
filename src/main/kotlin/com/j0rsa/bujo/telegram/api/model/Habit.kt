@@ -23,7 +23,6 @@ data class HabitRequest(
 
 data class Habit(
     val name: String = "",
-    val done: Boolean = false,
     val tags: List<Tag> = emptyList(),
     val numberOfRepetitions: Int = 0,
     val period: Period = Period.Day,
@@ -40,11 +39,13 @@ enum class Period {
 
 data class HabitsInfo(
     val habit: Habit,
+    val done: Boolean = false,
     val currentStreak: BigDecimal = BigDecimal.ZERO
 )
 
 data class HabitInfoView(
     val habit: Habit,
+    val done: Boolean = false,
     val streakRow: StreakRow
 )
 

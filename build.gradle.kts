@@ -41,6 +41,8 @@ dependencies {
     testImplementation(TestLibs.mockito)
     testImplementation(TestLibs.mockitoKotlin)
     testImplementation(TestLibs.assertk)
+
+    runtimeClasspath(Libs.janino)
 }
 
 tasks {
