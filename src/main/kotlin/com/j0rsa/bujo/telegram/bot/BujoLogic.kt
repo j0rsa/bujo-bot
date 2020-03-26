@@ -414,6 +414,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                             },
                             {
                                 sendLocalizedMessage(state, Lines::actionRegisteredMessage)
+                                showHabits(bot, update)
                             })
                     }
                     userActors.remove(BotUserId(user))
