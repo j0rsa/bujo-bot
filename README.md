@@ -16,14 +16,14 @@ It covers the following operations:
     * Creation (covered by action creation operation and habit creation)
 * Habit actions:
     * Creation
-    * Deletion (only for today)
 * Tag actions:
     * Creation
     
 TODO:
-* Find habits by tag
+* Show actions (with pagination)
 * Action view
-* Edit action 
+* Delete action 
+* Find habits by tag
 
 #### Run locally
 

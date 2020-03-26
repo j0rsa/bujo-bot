@@ -48,8 +48,8 @@ open class StateMachineActor<T : ActorState>(
                         }
                         is ActorMessage.Skip -> {
                             when {
-                                state.subActor != null -> {
-                                    state.subActor?.send(ActorMessage.Skip)
+                                state.subActor != DummyChannel -> {
+                                    state.subActor.send(ActorMessage.Skip)
                                     currentStep
                                 }
                                 currentStep is OptionalStep<*> -> nextStep() ?: return@actor

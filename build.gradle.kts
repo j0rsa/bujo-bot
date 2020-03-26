@@ -60,6 +60,10 @@ tasks {
             attributes(mapOf("Main-Class" to "com.j0rsa.bujo.telegram.App"))
         }
     }
+
+    docker {
+        dependsOn(this@tasks.test.get())
+    }
 }
 
 val hash = Runtime.getRuntime().exec("git rev-parse --short=6 HEAD").inputStream.reader().use { it.readText() }.trim()

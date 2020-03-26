@@ -22,9 +22,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class AddValueActorTest : ActorBotTest() {
 	private val actionId = ActionId.randomValue()
-	private val defaultName = "Mood"
 	private val defaultType = ValueType.Mood
-	private val defaultValue = "5"
 
 	@Test
 	fun testSuccessAddValue() = runBlockingTest {
