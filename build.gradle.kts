@@ -37,12 +37,14 @@ dependencies {
     kapt(Libs.arrowMeta)
 
     testImplementation(TestLibs.junit)
+    testImplementation(TestLibs.koTest)
     testImplementation(TestLibs.coroutinesTest)
     testImplementation(TestLibs.mockito)
     testImplementation(TestLibs.mockitoKotlin)
     testImplementation(TestLibs.assertk)
 
     runtimeClasspath(Libs.janino)
+    testRuntimeClasspath(Libs.janino)
 }
 
 tasks {
@@ -63,8 +65,12 @@ tasks {
         }
     }
 
+    test {
+        useJUnitPlatform()
+    }
+
     docker {
-        dependsOn(this@tasks.test.get())
+        dependsOn(test.get())
     }
 }
 

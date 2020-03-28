@@ -31,6 +31,7 @@ object Versions {
 
     /* test */
     const val junit = "4.12"
+    const val koTest = "4.0.1"
 }
 
 object Libs {
@@ -56,4 +57,5 @@ object TestLibs {
     const val mockito = "org.mockito:mockito-core:3.2.4"
     const val mockitoKotlin = "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
     const val assertk = "com.willowtreeapps.assertk:assertk-jvm:0.21"
+    const val koTest = "io.kotest:kotest-runner-junit5-jvm:${Versions.koTest}"
 }

@@ -67,7 +67,7 @@ open class StateMachineActor<T : ActorState>(
 }
 
 data class StateWithLocalization<T>(val state: T, val cause: Throwable?) : Localized {
-    val logger = LoggerFactory.getLogger(this::class.java.name)
+    internal val logger = LoggerFactory.getLogger(this::class.java.name)
 }
 
 interface Localized {
@@ -160,6 +160,8 @@ fun <T : ActorState> mandatoryStep(
 ) =
     MandatoryStep(setup, action)
 
-interface Step<out T> : Localized
-data class StepSetupDefinition<out T : ActorState>(val state: T) : Step<T>
-data class StepActionDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say) : Step<T>
+abstract class Step<out T> : Localized {
+    val logger = LoggerFactory.getLogger(this::class.java.name)
+}
+data class StepSetupDefinition<out T : ActorState>(val state: T) : Step<T>()
+data class StepActionDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say) : Step<T>()

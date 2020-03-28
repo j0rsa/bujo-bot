@@ -224,7 +224,7 @@ object Markup {
             val streakCaption = if (habitsInfo.currentStreak > BigDecimal.ONE) " 🎯: ${habitsInfo.currentStreak}" else ""
             val habit = habitsInfo.habit
 
-            val habitCaption = "\uD83C\uDFC3${habit.name}$streakCaption"
+            val habitCaption = "${habit.name}$streakCaption"
             listOfNotNull(
                 if (!habitsInfo.done)
                     InlineKeyboardButton("◻️", callbackData = "$CALLBACK_ADD_FAST_HABIT_ACTION_BUTTON: ${habit.id?.value}")
