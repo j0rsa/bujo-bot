@@ -204,7 +204,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 AddValueState(
                     ctx,
                     trackerUser
-                    )
+                )
             ) {
                 ctx.client.addValue(trackerUser.id, actionId, result).fold(
                     {
@@ -394,25 +394,33 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
             IO.fx {
                 val (habitInfo) = TrackerClient.getHabit(trackerUser.id, habitIdObject)
                 val habit = habitInfo.habit
-                AddFastValueListActor.yield(
-                    AddFastValueListState(ctx, trackerUser, habit.values)
-                ) {
-                    cause ?: ctx.client.createHabitAction(
+                if (habit.values.isEmpty()) {
+                    ctx.client.createHabitAction(
                         trackerUser.id,
                         habitIdObject,
-                        HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), result)
-                    ).fold(
-                        {
-                            !sendLocalizedMessage(
-                                Lines::actionNotRegisteredMessage
-                            )
-                        },
-                        {
-                            sendLocalizedMessage(Lines::actionRegisteredMessage)
-                            showHabits(bot, update)
-                        })
-                    userActors.remove(BotUserId(user))
-                }
+                        HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), emptyList())
+                    )
+                    null
+                } else
+                    AddFastValueListActor.yield(
+                        AddFastValueListState(ctx, trackerUser, habit.values)
+                    ) {
+                        cause ?: ctx.client.createHabitAction(
+                            trackerUser.id,
+                            habitIdObject,
+                            HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), result)
+                        ).fold(
+                            {
+                                !sendLocalizedMessage(
+                                    Lines::actionNotRegisteredMessage
+                                )
+                            },
+                            {
+                                sendLocalizedMessage(Lines::actionRegisteredMessage)
+                                showHabits(bot, update)
+                            })
+                        userActors.remove(BotUserId(user))
+                    }
             }.handleError {
                 logger.error("IO error: $it")
                 null

@@ -17,7 +17,6 @@ import io.kotest.core.spec.style.ShouldSpecDsl
 import io.kotest.core.test.TestCaseConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineScope
 import kotlin.reflect.KProperty1
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -36,7 +35,7 @@ abstract class ActorSpec(body: ActorSpec.() -> Unit = {}) : DslDrivenSpec(), Sho
         format: String = lines.joinToString(separator = "\n") { "%s" }
     ): String =
         format.format(*
-        lines.map { line -> line.get(BujoTalk.withLanguage(user.language))}
+        lines.map { line -> line.get(BujoTalk.withLanguage(user.language)) }
             .toTypedArray()
         )
 

@@ -5,7 +5,6 @@ import arrow.fx.extensions.toIO
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import com.j0rsa.bujo.telegram.bot.ActionId
 import com.j0rsa.bujo.telegram.bot.Markup.valueMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.valueTypeMarkup
 import com.j0rsa.bujo.telegram.bot.i18n.Lines

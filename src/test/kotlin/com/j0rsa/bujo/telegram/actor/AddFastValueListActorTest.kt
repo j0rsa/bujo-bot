@@ -13,13 +13,11 @@ import com.j0rsa.bujo.telegram.monad.Client
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
-import io.kotest.data.forAll
-import io.kotest.data.headers
-import io.kotest.data.row
-import io.kotest.data.table
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
+import org.mockito.Mockito
 import java.time.ZonedDateTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -28,12 +26,17 @@ class AddFastValueListActorTest : ActorSpec({
         val client = mock<Client> {
             on { getUser(userId) } doReturn user.right().toIO()
         }
-
         val trackerUser = client.getUser(userId).unsafeRunSync()
         val state = AddFastValueListState(actorContext(client), trackerUser, templates)
-        val actorChannel = AddFastValueListActor.yield(state)
-        Thread.sleep(1000)
-        strings.forEach {actorChannel.send(ActorMessage.Say(it)) }
+        var actorResult = emptyList<Value>()
+        val actorChannel = AddFastValueListActor.yield(state) {
+            actorResult = result
+        }
+        strings.forEach {
+            val result = CompletableDeferred<Boolean>()
+            actorChannel.send(ActorMessage.Say(it, result))
+            result.await()
+        }
 
         verify(client).getUser(userId)
         templates.forEach {
@@ -44,32 +47,26 @@ class AddFastValueListActorTest : ActorSpec({
                 replyMarkup = Markup.valueMarkup(it.type)
             )
         }
-
-        var values = emptyList<Value>()
-        actorChannel.invokeOnClose {
-            values = state.values
-        }
-        values
+        actorResult
     }
 
     val templatesWithValues = listOf(
         ValueTemplate(ValueType.Mood) to "1",
+        ValueTemplate(ValueType.EndDate, name = "end date") to ZonedDateTime.now().toString().dropLast(4),
         ValueTemplate(ValueType.Mood, name = "mood2") to "2",
-        ValueTemplate(ValueType.EndDate, name = "mood2") to ZonedDateTime.now().toString()
+        ValueTemplate(ValueType.EndDate, name = "end date2") to ZonedDateTime.now().toString().dropLast(4)
     )
 
     fun templates(n: Int) = templatesWithValues.take(n).map { it.first }
     fun strings(n: Int) = templatesWithValues.take(n).map { it.second }
-    fun values(n: Int) = templatesWithValues.take(n).map { Value(it.first.type, it.first.name, it.second) }
+    fun values(n: Int) = templatesWithValues.take(n).map { Value(it.first.type, it.second, it.first.name) }
 
     "value addition" {
-        table(
-            headers("templates", "stings", "value"),
-            *(1..templatesWithValues.size).map {
-                row(templates(it), strings(it), values(it))
-            }.toTypedArray()
-        ).forAll { templates, strings, values ->
-            performActor(templates, strings) shouldBe values
+        (1..templatesWithValues.size).forEach {
+            should("handle $it value${if(it!=1) "s" else "" }") {
+                Mockito.clearInvocations(bot)
+                performActor(templates(it), strings(it)) shouldBe values(it)
+            }
         }
     }
 })

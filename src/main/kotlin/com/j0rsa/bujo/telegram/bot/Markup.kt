@@ -177,8 +177,8 @@ object Markup {
         listOf(
             listOf(
                 InlineKeyboardButton(
-                    text = "now: ${LocalDateTime.now()}",
-                    callbackData = "$CALLBACK_ACTOR_TEMPLATE:️${LocalDateTime.now()}"
+                    text = "now: ${LocalDateTime.now().toString().dropLast(4)}",
+                    callbackData = "$CALLBACK_ACTOR_TEMPLATE:️${LocalDateTime.now().toString().dropLast(4)}"
                 )
             )
         )
