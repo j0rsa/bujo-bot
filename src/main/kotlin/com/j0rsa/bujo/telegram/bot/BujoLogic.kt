@@ -7,6 +7,8 @@ import arrow.fx.handleError
 import com.j0rsa.bujo.telegram.Config
 import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
+import com.j0rsa.bujo.telegram.actor.common.ContextualResult
+import com.j0rsa.bujo.telegram.actor.common.Localized
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
@@ -277,8 +279,6 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                             )
                             if (initResult != null) {
                                 userActors[userId] = initResult
-                            } else {
-                                bot.sendGenericError(actorContext.chatId, user.languageCode)
                             }
                         }
                         .handleError {
@@ -395,38 +395,50 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 val (habitInfo) = TrackerClient.getHabit(trackerUser.id, habitIdObject)
                 val habit = habitInfo.habit
                 if (habit.values.isEmpty()) {
-                    ctx.client.createHabitAction(
-                        trackerUser.id,
-                        habitIdObject,
-                        HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), emptyList())
-                    )
+                    createHabitActionWithMessage(ctx, trackerUser, habitIdObject, habit, bot, update, emptyList())
                     null
                 } else
                     AddFastValueListActor.yield(
                         AddFastValueListState(ctx, trackerUser, habit.values)
                     ) {
-                        cause ?: ctx.client.createHabitAction(
-                            trackerUser.id,
-                            habitIdObject,
-                            HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), result)
-                        ).fold(
-                            {
-                                !sendLocalizedMessage(
-                                    Lines::actionNotRegisteredMessage
-                                )
-                            },
-                            {
-                                sendLocalizedMessage(Lines::actionRegisteredMessage)
-                                showHabits(bot, update)
-                            })
+                        cause ?: createHabitActionWithMessage(ctx, trackerUser, habitIdObject, habit, bot, update, result)
                         userActors.remove(BotUserId(user))
                     }
             }.handleError {
                 logger.error("IO error: $it")
                 null
-            }
-                .unsafeRunSync()
+            }.unsafeRunSync()
         }
+    }
+
+
+    private fun createHabitActionWithMessage(
+        ctx: ActorContext,
+        trackerUser: TrackerUser,
+        habitIdObject: HabitId,
+        habit: Habit,
+        bot: Bot,
+        update: Update,
+        result: List<Value>
+    ) {
+        val a = object :Localized {
+            override fun context(): ActorContext = ctx
+            override fun trackerUser(): TrackerUser = trackerUser
+        }
+        ctx.client.createHabitAction(
+            trackerUser.id,
+            habitIdObject,
+            HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), result)
+        ).fold(
+            {
+                !a.sendLocalizedMessage(
+                    Lines::actionNotRegisteredMessage
+                )
+            },
+            {
+                a.sendLocalizedMessage(Lines::actionRegisteredMessage)
+                showHabits(bot, update)
+            })
     }
 
 //	fun editAction(message: CallbackMessage) {
