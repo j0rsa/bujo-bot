@@ -51,7 +51,7 @@ class CreateActionActorTest : ActorBotTest() {
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
 		val actorChannel = CreateActionActor.yield(CreateActionState(actorContext(client), trackerUser))
-		actorChannel.send(ActorMessage.Skip)
+		actorChannel.send(ActorMessage.Skip())
 
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
 		assertThat(actorChannel.isClosedForSend).isFalse()
@@ -68,7 +68,7 @@ class CreateActionActorTest : ActorBotTest() {
 		val trackerUser = client.getUser(userId).unsafeRunSync()
 		val actorChannel = CreateActionActor.yield(CreateActionState(actorContext(client), trackerUser))
 		actorChannel.send(sayDescription())
-		actorChannel.send(ActorMessage.Skip)
+		actorChannel.send(ActorMessage.Skip())
 
 		verify(bot).sendMessage(chatId, getLocalizedMessage(Lines::stepCannotBeSkippedMessage))
 		assertThat(actorChannel.isClosedForSend).isFalse()

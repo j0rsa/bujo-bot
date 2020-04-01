@@ -6,31 +6,29 @@ import com.j0rsa.bujo.telegram.api.model.Value
 import com.j0rsa.bujo.telegram.api.model.ValueTemplate
 import com.j0rsa.bujo.telegram.bot.BujoLogic
 import com.j0rsa.bujo.telegram.monad.ActorContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
 
 data class AddFastValueListState(
     override val ctx: ActorContext,
     override val trackerUser: TrackerUser,
-    val templates: List<ValueTemplate>,
-    val values: MutableList<Value> = mutableListOf()
+    internal val templates: List<ValueTemplate>,
+    internal val values: MutableList<Value> = mutableListOf()
 ) : ActorState(ctx, trackerUser)
 
 @OptIn(ExperimentalCoroutinesApi::class)
-object AddFastValueListActor : StateMachineActor<AddFastValueListState>(
+object AddFastValueListActor : StateMachineActor<AddFastValueListState, List<Value>>(
+    { values },
     mandatoryStep({
         state.subActor = initChain(state, state.templates.firstOrNull(), state.templates.drop(1))
         true
     }, {
-        logger.debug("Received a value: ${message.text}")
-        if (state.subActor != DummyChannel) BujoLogic.handleSayActorMessage(message.text, state.subActor)
-//         TODO: try to make it async and remove the sleep
-        if (state.values.size >= state.templates.size - 1) Thread.sleep(2000)
-//        var finished = false
-//        state.subActor.invokeOnClose {
-//            finished = state.subActor == DummyChannel
-//        }
-//        finished
+        if (state.subActor != DummyChannel) {
+            val result = CompletableDeferred<Boolean>()
+            BujoLogic.handleSayActorMessage(message.text, state.subActor, result)
+            result.await()
+        }
         state.subActor == DummyChannel
     })
 )
@@ -49,13 +47,8 @@ fun initChain(
                 currentTemplate.name
             )
         ) {
-            logger.debug("Received a value with type: ${state.name}(${state.type}) and value: ${state.value}")
-            superState.values.add(
-                Value(
-                    state.type,
-                    state.value
-                )
-            )
             superState.subActor = initChain(superState, templates.firstOrNull(), templates.drop(1))
+            superState.values.add(result)
         }
+
 }

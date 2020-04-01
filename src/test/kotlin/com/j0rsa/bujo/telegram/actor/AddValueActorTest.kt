@@ -21,7 +21,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class AddValueActorTest : ActorBotTest() {
-	private val actionId = ActionId.randomValue()
 	private val defaultType = ValueType.Mood
 
 	@Test
@@ -31,7 +30,7 @@ internal class AddValueActorTest : ActorBotTest() {
 		}
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
-		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser,  actionId))
+		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser))
 		actorChannel.send(sayType())
 		actorChannel.send(sayName())
 		actorChannel.send(sayValue())
@@ -58,7 +57,7 @@ internal class AddValueActorTest : ActorBotTest() {
 		}
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
-		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser, actionId))
+		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser))
 		actorChannel.send(skip())
 
 		verify(bot).sendMessage(
@@ -78,7 +77,7 @@ internal class AddValueActorTest : ActorBotTest() {
 		}
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
-		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser, actionId))
+		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser))
 		actorChannel.send(sayType())
 		actorChannel.send(sayName())
 		actorChannel.send(skip())
@@ -107,7 +106,7 @@ internal class AddValueActorTest : ActorBotTest() {
 		}
 
 		val trackerUser = client.getUser(userId).unsafeRunSync()
-		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser, actionId))
+		val actorChannel = AddValueActor.yield(AddValueState(actorContext(client), trackerUser))
 		actorChannel.send(sayType())
 		actorChannel.send(skip())
 		actorChannel.send(sayValue())

@@ -4,6 +4,7 @@ import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.actor.common.ActorState
 import com.j0rsa.bujo.telegram.actor.common.StateMachineActor
 import com.j0rsa.bujo.telegram.actor.common.mandatoryStep
+import com.j0rsa.bujo.telegram.api.model.ActionRequest
 import com.j0rsa.bujo.telegram.api.model.TagRequest
 import com.j0rsa.bujo.telegram.api.model.TrackerUser
 import com.j0rsa.bujo.telegram.monad.ActorContext
@@ -19,16 +20,19 @@ data class CreateActionState(
 	var tags: List<TagRequest> = emptyList()
 ) : ActorState(ctx, trackerUser)
 
-object CreateActionActor : StateMachineActor<CreateActionState>(
+object CreateActionActor : StateMachineActor<CreateActionState, ActionRequest>(
+	{
+		ActionRequest(actionDescription, tags)
+	},
 	mandatoryStep(
 		{
-			sendLocalizedMessage(state, listOf(Lines::actionCreationInitMessage, Lines::actionCreationDescriptionInput))
+			sendLocalizedMessage(listOf(Lines::actionCreationInitMessage, Lines::actionCreationDescriptionInput))
 		}, {
 			state.actionDescription = message.text
 			true
 		}),
 	mandatoryStep({
-		sendLocalizedMessage(state, Lines::actionCreationTagsInput)
+		sendLocalizedMessage(Lines::actionCreationTagsInput)
 	}, {
 		state.tags = message.text.split(",").map { TagRequest.fromString(it) }
 		true

@@ -26,7 +26,7 @@ abstract class ActorSpec(body: ActorSpec.() -> Unit = {}) : DslDrivenSpec(), Sho
     val userId = BotUserId(1L)
     val bot = mock<TelegramBot>()
     val user = TrackerUser(UserId.randomValue(), 1L)
-    val skip = ActorMessage.Skip
+    val skip = ActorMessage.Skip()
 
     fun CoroutineScope.actorContext(client: Client) =
         ActorContext(chatId, userId, bot, this, client)

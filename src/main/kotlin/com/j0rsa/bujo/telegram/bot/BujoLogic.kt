@@ -22,11 +22,8 @@ import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import com.j0rsa.bujo.telegram.bot.i18n.Language
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.monad.ActorContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.launch
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
 import org.http4k.core.Status
@@ -42,7 +39,7 @@ import kotlin.reflect.KProperty1
 
 @OptIn(ExperimentalCoroutinesApi::class)
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
-    private val logger = LoggerFactory.getLogger(this::class.java.name)
+    internal val logger = LoggerFactory.getLogger(this::class.java.name)
     private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
     fun checkBackendStatus(bot: Bot, message: Message) {
         val text = if (TrackerClient.health()) {
@@ -118,23 +115,27 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
     fun handleSayActorMessage(
         message: String,
-        channel: SendChannel<ActorMessage>
+        channel: SendChannel<ActorMessage>,
+        result: CompletableDeferred<Boolean> = CompletableDeferred()
     ) {
         launch {
             if (!channel.isClosedForSend) {
-                channel.send(ActorMessage.Say(message))
+                channel.send(ActorMessage.Say(message, result))
             }
         }
     }
 
-    fun handleUserActorSkipMessage(update: Update) {
+    fun handleUserActorSkipMessage(
+        update: Update,
+        result: CompletableDeferred<Boolean> = CompletableDeferred()
+    ) {
         update.message?.let { message ->
             message.from?.let { user ->
                 launch {
                     val userId = BotUserId(user)
                     userActors[userId]?.let { actorChannel ->
                         if (!actorChannel.isClosedForSend) {
-                            actorChannel.send(ActorMessage.Skip)
+                            actorChannel.send(ActorMessage.Skip(result))
                         }
                     }
                 }
@@ -176,24 +177,21 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
             CreateActionActor.yield(
                 CreateActionState(ctx, trackerUser)
             ) {
-                cause ?: with(state) {
-                    ctx.client.createAction(trackerUser.id, ActionRequest(actionDescription, tags)).fold(
-                        {
-                            BujoLogic.logger.error("IO error: $it")
-                            !sendLocalizedMessage(
-                                state,
-                                Lines::actionNotRegisteredMessage
-                            )
-                        },
-                        { actionId ->
-                            sendLocalizedMessage(
-                                state, Lines::actionRegisteredMessage,
-                                createdActionMarkup(state.trackerUser.language, actionId)
-                            )
-                        })
-                }
-                userActors.remove(BotUserId(user))
+                cause ?: ctx.client.createAction(trackerUser.id, result).fold(
+                    {
+                        logger.error("IO error: $it")
+                        !sendLocalizedMessage(
+                            Lines::actionNotRegisteredMessage
+                        )
+                    },
+                    { actionId ->
+                        sendLocalizedMessage(
+                            Lines::actionRegisteredMessage,
+                            createdActionMarkup(trackerUser.language, actionId)
+                        )
+                    })
             }
+            userActors.remove(BotUserId(user))
         }
 
     fun addValue(
@@ -201,24 +199,22 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         update: Update
     ) {
         initNewActor(callbackMessage.bot, update) { user, trackerUser, _, ctx ->
+            val actionId = ActionId(UUID.fromString(callbackMessage.callBackData))
             AddValueActor.yield(
                 AddValueState(
                     ctx,
-                    trackerUser,
-                    ActionId(UUID.fromString(callbackMessage.callBackData))
-                )
-            ) {
-                with(state) {
-                    ctx.client.addValue(trackerUser.id, actionId, Value(type, value, name)).fold(
-                        {
-                            BujoLogic.logger.error("IO error: $it")
-                            !sendLocalizedMessage(state, Lines::addActionValueNotRegistered)
-                        },
-                        {
-                            sendLocalizedMessage(state, Lines::addActionValueRegistered)
-                        }
+                    trackerUser
                     )
-                }
+            ) {
+                ctx.client.addValue(trackerUser.id, actionId, result).fold(
+                    {
+                        BujoLogic.logger.error("IO error: $it")
+                        !sendLocalizedMessage(Lines::addActionValueNotRegistered)
+                    },
+                    {
+                        sendLocalizedMessage(Lines::addActionValueRegistered)
+                    }
+                )
                 userActors.remove(BotUserId(user))
             }
         }
@@ -239,25 +235,19 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
             HabitActor.yield(
                 CreateHabitState(ctx, trackerUser)
             ) {
-                cause ?: with(state) {
-                    val habitRequest =
-                        HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
-                    ctx.client.createHabit(trackerUser.id, habitRequest).fold(
-                        {
-                            BujoLogic.logger.error("IO error: $it")
-                            !sendLocalizedMessage(
-                                this,
-                                Lines::habitNotRegisteredMessage
-                            )
-                        },
-                        { habitId ->
-                            sendLocalizedMessage(
-                                this,
-                                Lines::habitRegisteredMessage,
-                                habitCreatedMarkup(trackerUser.language, habitId)
-                            )
-                        })
-                }
+                cause ?: ctx.client.createHabit(trackerUser.id, result).fold(
+                    {
+                        BujoLogic.logger.error("IO error: $it")
+                        !sendLocalizedMessage(
+                            Lines::habitNotRegisteredMessage
+                        )
+                    },
+                    { habitId ->
+                        sendLocalizedMessage(
+                            Lines::habitRegisteredMessage,
+                            habitCreatedMarkup(trackerUser.language, habitId)
+                        )
+                    })
                 userActors.remove(BotUserId(user))
             }
         }
@@ -407,23 +397,20 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                 AddFastValueListActor.yield(
                     AddFastValueListState(ctx, trackerUser, habit.values)
                 ) {
-                    cause ?: with(state) {
-                        ctx.client.createHabitAction(
-                            trackerUser.id,
-                            habitIdObject,
-                            HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), values)
-                        ).fold(
-                            {
-                                !sendLocalizedMessage(
-                                    state,
-                                    Lines::actionNotRegisteredMessage
-                                )
-                            },
-                            {
-                                sendLocalizedMessage(state, Lines::actionRegisteredMessage)
-                                showHabits(bot, update)
-                            })
-                    }
+                    cause ?: ctx.client.createHabitAction(
+                        trackerUser.id,
+                        habitIdObject,
+                        HabitActionRequest(habit.name, habit.tags.map(Tag::toTagRequest), result)
+                    ).fold(
+                        {
+                            !sendLocalizedMessage(
+                                Lines::actionNotRegisteredMessage
+                            )
+                        },
+                        {
+                            sendLocalizedMessage(Lines::actionRegisteredMessage)
+                            showHabits(bot, update)
+                        })
                     userActors.remove(BotUserId(user))
                 }
             }.handleError {

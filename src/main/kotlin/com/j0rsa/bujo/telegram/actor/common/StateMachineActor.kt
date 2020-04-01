@@ -18,18 +18,26 @@ import kotlin.reflect.KProperty1
  * @since 01.03.20
  */
 
-open class StateMachineActor<T : ActorState>(
+open class StateMachineActor<T : ActorState, OUT>(
+    private val onComplete: T.() -> OUT,
     private vararg val steps: ActorStep<T>
-) : Actor<T>, Localized {
+) : Actor<T, OUT> {
     private val logger = LoggerFactory.getLogger(this::class.java.name)
 
     @OptIn(ObsoleteCoroutinesApi::class)
     override fun yield(
         state: T,
-        onCompletionHandler: (StateWithLocalization<T>.() -> Unit)?
+        onCompletionHandler: (ContextualResult<OUT>.() -> Unit)?
     ): SendChannel<ActorMessage> =
         with(state.ctx.scope) {
-            actor(onCompletion = { cause -> onCompletionHandler?.let { it(StateWithLocalization(state, cause)) } }) {
+
+            actor(
+                onCompletion = { cause ->
+                    onCompletionHandler?.let {
+                        it(ContextualResult(state.ctx, state.trackerUser, onComplete(state), cause))
+                    }
+                }
+            ) {
                 val iterator = steps.iterator()
                 fun nextStep(): ActorStep<T>? =
                     if (iterator.hasNext()) {
@@ -42,19 +50,29 @@ open class StateMachineActor<T : ActorState>(
                 for (message in channel) {
                     currentStep = when (message) {
                         is ActorMessage.Say -> {
-                            if (currentStep(state, message)) {
+                            val success = currentStep(state, message)
+                            message.result.complete(success)
+                            if (success) {
                                 nextStep() ?: return@actor
                             } else currentStep
                         }
                         is ActorMessage.Skip -> {
                             when {
                                 state.subActor != DummyChannel -> {
-                                    state.subActor.send(ActorMessage.Skip)
+                                    state.subActor.send(message)
                                     currentStep
                                 }
-                                currentStep is OptionalStep<*> -> nextStep() ?: return@actor
+                                currentStep is OptionalStep<*> -> {
+                                    message.result.complete(true)
+                                    nextStep() ?: return@actor
+                                }
                                 currentStep is MandatoryStep<*> -> {
-                                    sendLocalizedMessage(state, Lines::stepCannotBeSkippedMessage)
+                                    state.ctx.bot.sendMessage(
+                                        state.ctx.chatId,
+                                        BujoTalk.withLanguage(state.trackerUser.language)
+                                            .stepCannotBeSkippedMessage
+                                    )
+                                    message.result.complete(false)
                                     currentStep
                                 }
                                 else -> nextStep() ?: return@actor
@@ -66,37 +84,40 @@ open class StateMachineActor<T : ActorState>(
         }
 }
 
-data class StateWithLocalization<T>(val state: T, val cause: Throwable?) : Localized {
+data class ContextualResult<OUT>(
+    val ctx: ActorContext,
+    private val trackerUser: TrackerUser,
+    val result: OUT,
+    val cause: Throwable?
+) : Localized {
     internal val logger = LoggerFactory.getLogger(this::class.java.name)
+    override fun context(): ActorContext = ctx
+    override fun trackerUser(): TrackerUser = trackerUser
 }
 
 interface Localized {
+    fun context(): ActorContext
+    fun trackerUser(): TrackerUser
     fun sendLocalizedMessage(
-        state: ActorState,
         line: KProperty1<Lines, String>,
         replyMarkup: ReplyMarkup? = null,
         formatValues: List<String> = emptyList()
     ): Boolean =
-        with(state) {
-            ctx.bot.sendMessage(
-                chatId = ctx.chatId,
-                text = line.get(BujoTalk.withLanguage(trackerUser.language)).format(*formatValues.toTypedArray()),
-                replyMarkup = replyMarkup
-            ).let { true }
-        }
+        context().bot.sendMessage(
+            chatId = context().chatId,
+            text = line.get(BujoTalk.withLanguage(trackerUser().language)).format(*formatValues.toTypedArray()),
+            replyMarkup = replyMarkup
+        ).let { true }
 
     fun sendLocalizedMessage(
-        state: ActorState,
         lines: List<KProperty1<Lines, String>>,
         replyMarkup: ReplyMarkup? = null
     ) =
-        with(state) {
-            ctx.bot.sendMessage(
-                chatId = ctx.chatId,
-                text = lines.joinToString(separator = "\n") { it.get(BujoTalk.withLanguage(trackerUser.language)) },
-                replyMarkup = replyMarkup
-            ).let { true }
-        }
+        context().bot.sendMessage(
+            chatId = context().chatId,
+            text = lines.joinToString(separator = "\n") { it.get(BujoTalk.withLanguage(trackerUser().language)) },
+            replyMarkup = replyMarkup
+        ).let { true }
 }
 
 abstract class ActorState(
@@ -105,63 +126,61 @@ abstract class ActorState(
     var subActor: SendChannel<ActorMessage> = DummyChannel
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 object DummyChannel : SendChannel<ActorMessage> {
-    @ExperimentalCoroutinesApi
-    override val isClosedForSend: Boolean
-        get() = true
-
+    override val isClosedForSend: Boolean = true
     override suspend fun send(element: ActorMessage) {}
-
-    @ExperimentalCoroutinesApi
-    override val isFull: Boolean
-        get() = true
+    override val isFull = true
     override val onSend: SelectClause2<ActorMessage, SendChannel<ActorMessage>>
         get() = TODO("Not yet implemented")
 
     override fun close(cause: Throwable?): Boolean = true
+    override fun invokeOnClose(handler: (cause: Throwable?) -> Unit) {
+        handler(null)
+    }
 
-    @ExperimentalCoroutinesApi
-    override fun invokeOnClose(handler: (cause: Throwable?) -> Unit) { handler(null) }
     override fun offer(element: ActorMessage): Boolean = true
-
 }
 
 sealed class ActorStep<in T : ActorState>(
     private val setup: StepSetupDefinition<T>.() -> Boolean,
-    private val action: StepActionDefinition<T>.() -> Boolean
+    private val action: suspend StepActionDefinition<T>.() -> Boolean
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java.name)
-    open fun init(state: T): Boolean = setup(StepSetupDefinition(state))
-    open operator fun invoke(state: T, message: ActorMessage.Say = ActorMessage.Say("")): Boolean =
+    fun init(state: T): Boolean = setup(StepSetupDefinition(state))
+    suspend operator fun invoke(state: T, message: ActorMessage.Say = ActorMessage.Say("")): Boolean =
         action(StepActionDefinition(state, message))
 }
 
 class OptionalStep<T : ActorState>(
     setup: StepSetupDefinition<T>.() -> Boolean,
-    action: StepActionDefinition<T>.() -> Boolean
+    action: suspend StepActionDefinition<T>.() -> Boolean
 ) :
     ActorStep<T>(setup, action)
 
 class MandatoryStep<T : ActorState>(
     setup: StepSetupDefinition<T>.() -> Boolean,
-    action: StepActionDefinition<T>.() -> Boolean
+    action: suspend StepActionDefinition<T>.() -> Boolean
 ) :
     ActorStep<T>(setup, action)
 
 fun <T : ActorState> optionalStep(
     setup: StepSetupDefinition<T>.() -> Boolean,
-    action: StepActionDefinition<T>.() -> Boolean
+    action: suspend StepActionDefinition<T>.() -> Boolean
 ) =
     OptionalStep(setup, action)
 
 fun <T : ActorState> mandatoryStep(
     setup: StepSetupDefinition<T>.() -> Boolean,
-    action: StepActionDefinition<T>.() -> Boolean
+    action: suspend StepActionDefinition<T>.() -> Boolean
 ) =
     MandatoryStep(setup, action)
 
-abstract class Step<out T> : Localized {
+abstract class Step<out T : ActorState>(private val state: T) : Localized {
     val logger = LoggerFactory.getLogger(this::class.java.name)
+    override fun context(): ActorContext = state.ctx
+    override fun trackerUser(): TrackerUser = state.trackerUser
 }
-data class StepSetupDefinition<out T : ActorState>(val state: T) : Step<T>()
-data class StepActionDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say) : Step<T>()
+
+data class StepSetupDefinition<out T : ActorState>(val state: T) : Step<T>(state)
+data class StepActionDefinition<out T : ActorState>(val state: T, val message: ActorMessage.Say) : Step<T>(state)

@@ -17,36 +17,38 @@ import java.time.LocalDateTime
 data class CreateHabitState(
 	override val ctx: ActorContext,
 	override val trackerUser: TrackerUser,
-	var name: String = "",
-	var tags: List<TagRequest> = emptyList(),
-	var numberOfRepetitions: Int = 0,
-	var period: Period = Period.Day,
-	var quote: String? = null,
-	var bad: Boolean? = null,
-	var startFrom: LocalDateTime? = null,
-	val values: MutableList<ValueTemplate> = mutableListOf()
+	internal var name: String = "",
+	internal var tags: List<TagRequest> = emptyList(),
+	internal var numberOfRepetitions: Int = 0,
+	internal var period: Period = Period.Day,
+	internal var quote: String? = null,
+	internal var bad: Boolean? = null,
+	internal var startFrom: LocalDateTime? = null,
+	internal val values: MutableList<ValueTemplate> = mutableListOf()
 ) : ActorState(ctx, trackerUser)
 
-object HabitActor : StateMachineActor<CreateHabitState>(
+object HabitActor : StateMachineActor<CreateHabitState, HabitRequest>(
+	{
+		HabitRequest(name, tags, numberOfRepetitions, period, quote, bad, startFrom, values)
+	},
 	mandatoryStep({
-		sendLocalizedMessage(state, Lines::createHabitInitMessage)
+		sendLocalizedMessage(Lines::createHabitInitMessage)
 	}, {
 		state.name = message.text
 		true
 	}),
 	mandatoryStep({
-		sendLocalizedMessage(state, Lines::createHabitTagsMessage)
+		sendLocalizedMessage(Lines::createHabitTagsMessage)
 	}, {
 		state.tags = message.text.split(",").map { TagRequest.fromString(it) }
 		true
 	}),
 	mandatoryStep({
-		sendLocalizedMessage(state, Lines::createHabitPeriodMessage, periodMarkup(state.trackerUser.language))
+		sendLocalizedMessage(Lines::createHabitPeriodMessage, periodMarkup(state.trackerUser.language))
 	}, {
 		when (val period = Period.values().find { it.name == message.text }) {
 			null -> {
 				!sendLocalizedMessage(
-					state,
 					listOf(
 						Lines::badInputMessage,
 						Lines::createHabitPeriodMessage
@@ -61,14 +63,13 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 		}
 	}),
 	mandatoryStep({
-		sendLocalizedMessage(state, Lines::createHabitNumberOfRepetitionsMessage)
+		sendLocalizedMessage(Lines::createHabitNumberOfRepetitionsMessage)
 	}, {
 		try {
 			state.numberOfRepetitions = Integer.parseUnsignedInt(message.text)
 			true
 		} catch (e: NumberFormatException) {
 			!sendLocalizedMessage(
-				state,
 				listOf(
 					Lines::badInputMessage,
 					Lines::createHabitNumberOfRepetitionsMessage
@@ -77,14 +78,13 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 		}
 	}),
 	optionalStep({
-		sendLocalizedMessage(state, listOf(Lines::createHabitQuoteMessage, Lines::orTapSkipMessage))
+		sendLocalizedMessage(listOf(Lines::createHabitQuoteMessage, Lines::orTapSkipMessage))
 	}, {
 		state.quote = message.text.trim()
 		true
 	}),
 	optionalStep({
 		sendLocalizedMessage(
-			state,
 			listOf(Lines::doYouWantToAddValueMessage, Lines::orTapSkipMessage),
 			valueTypeMarkup(state.trackerUser.language)
 		)
@@ -93,12 +93,9 @@ object HabitActor : StateMachineActor<CreateHabitState>(
 			val superState = state
 			state.subActor = ValueTemplateActor
 				.yield(ValueTemplateState(state.ctx, state.trackerUser, ValueType.valueOf(message.text))) {
-					superState.values.add(
-						ValueTemplate(state.type, state.name)
-					)
+					superState.values.add(result)
 					superState.subActor = DummyChannel
 					sendLocalizedMessage(
-						state,
 						listOf(
 							Lines::valueAddedMessage,
 							Lines::doYouWantToAddValueMessage,

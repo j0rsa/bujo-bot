@@ -39,5 +39,5 @@ open class ActorBotTest {
             .toTypedArray()
         )
 
-    protected fun skip() = ActorMessage.Skip
+    protected fun skip() = ActorMessage.Skip()
 }
