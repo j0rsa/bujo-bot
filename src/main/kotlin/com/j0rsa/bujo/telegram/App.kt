@@ -49,7 +49,7 @@ class App {
 						HandleActorMessage(userId, ChatId(message), text)
 					)
 				}
-				callbackQuery("") { bot, update ->
+				callbackQuery("") { _, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					logger.debug("Received callback: ${callbackQuery.data}")
 				}

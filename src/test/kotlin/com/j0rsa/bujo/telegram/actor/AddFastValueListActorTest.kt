@@ -12,6 +12,7 @@ import com.j0rsa.bujo.telegram.bot.i18n.Lines
 import com.j0rsa.bujo.telegram.monad.Client
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
@@ -41,7 +42,7 @@ class AddFastValueListActorTest : ActorSpec({
         verify(client).getUser(userId)
         templates.forEach {
             val localizedCaption = it.name ?: it.type.caption.get(BujoTalk.withLanguage(state.trackerUser.language))
-            verify(bot).sendMessage(
+            verify(bot, times(1)).sendMessage(
                 chatId,
                 getLocalizedMessage(Lines::whatIsYourMessage).format(localizedCaption),
                 replyMarkup = Markup.valueMarkup(it.type)
