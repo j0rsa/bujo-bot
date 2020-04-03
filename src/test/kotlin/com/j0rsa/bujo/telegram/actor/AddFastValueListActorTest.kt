@@ -53,9 +53,9 @@ class AddFastValueListActorTest : ActorSpec({
 
     val templatesWithValues = listOf(
         ValueTemplate(ValueType.Mood) to "1",
-        ValueTemplate(ValueType.EndDate, name = "end date") to ZonedDateTime.now().toString().dropLast(4),
         ValueTemplate(ValueType.Mood, name = "mood2") to "2",
-        ValueTemplate(ValueType.EndDate, name = "end date2") to ZonedDateTime.now().toString().dropLast(4)
+        ValueTemplate(ValueType.Mood, name = "mood3") to "3",
+        ValueTemplate(ValueType.Mood, name = "mood4") to "4"
     )
 
     fun templates(n: Int) = templatesWithValues.take(n).map { it.first }
