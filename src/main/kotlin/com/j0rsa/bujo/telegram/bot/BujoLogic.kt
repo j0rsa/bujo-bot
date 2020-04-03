@@ -411,7 +411,6 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
-
     private fun createHabitActionWithMessage(
         ctx: ActorContext,
         trackerUser: TrackerUser,

@@ -14,41 +14,49 @@ data class AddFastValueListState(
     override val ctx: ActorContext,
     override val trackerUser: TrackerUser,
     internal val templates: List<ValueTemplate>,
-    internal val values: MutableList<Value> = mutableListOf()
+    internal val values: MutableList<Value> = mutableListOf(),
+    internal val iterator: Iterator<ValueTemplate> = templates.iterator(),
+    internal var actorSuccessfullyFinished: CompletableDeferred<Boolean> = CompletableDeferred()
 ) : ActorState(ctx, trackerUser)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 object AddFastValueListActor : StateMachineActor<AddFastValueListState, List<Value>>(
     { values },
     mandatoryStep({
-        state.subActor = initChain(state, state.templates.firstOrNull(), state.templates.drop(1))
+        state.subActor = initValueActor(state, state.iterator.next())
         true
     }, {
-        if (state.subActor != DummyChannel) {
-            val result = CompletableDeferred<Boolean>()
-            BujoLogic.handleSayActorMessage(message.text, state.subActor, result)
-            result.await()
+        val result = CompletableDeferred<Boolean>()
+        BujoLogic.handleSayActorMessage(message.text, state.subActor, result)
+        result.await()
+        val actorResult = state.actorSuccessfullyFinished.await()
+        if (actorResult) {
+            if (state.iterator.hasNext()) {
+                state.subActor = initValueActor(state, state.iterator.next())
+                false
+            } else {
+                true
+            }
+        } else {
+            false
         }
-        state.subActor == DummyChannel
     })
 )
 
-fun initChain(
+fun initValueActor(
     superState: AddFastValueListState,
-    currentTemplate: ValueTemplate?,
-    templates: List<ValueTemplate>
+    currentTemplate: ValueTemplate
 ): SendChannel<ActorMessage> {
-    return if (currentTemplate == null) DummyChannel else
-        AddFastValueActor.yield(
-            AddFastValueState(
-                superState.ctx,
-                superState.trackerUser,
-                currentTemplate.type,
-                currentTemplate.name
-            )
-        ) {
-            superState.subActor = initChain(superState, templates.firstOrNull(), templates.drop(1))
-            superState.values.add(result)
-        }
-
+    superState.actorSuccessfullyFinished = CompletableDeferred()
+    return AddFastValueActor.yield(
+        AddFastValueState(
+            superState.ctx,
+            superState.trackerUser,
+            currentTemplate.type,
+            currentTemplate.name
+        )
+    ) {
+        superState.values.add(result)
+        superState.actorSuccessfullyFinished.complete(true)
+    }
 }
