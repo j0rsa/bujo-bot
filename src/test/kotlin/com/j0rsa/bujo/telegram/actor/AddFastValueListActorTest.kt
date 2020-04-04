@@ -42,7 +42,7 @@ class AddFastValueListActorTest : ActorSpec({
         verify(client).getUser(userId)
         templates.forEach {
             val localizedCaption = it.name ?: it.type.caption.get(BujoTalk.withLanguage(state.trackerUser.language))
-            verify(bot, times(1)).sendMessage(
+            verify(bot).sendMessage(
                 chatId,
                 getLocalizedMessage(Lines::whatIsYourMessage).format(localizedCaption),
                 replyMarkup = Markup.valueMarkup(it.type)
