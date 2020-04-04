@@ -28,6 +28,8 @@ spec:
       labels:
         app: bujo-bot
     spec:
+      nodeSelector:
+        host: self
       containers:
         - name: bujo-bot
           image: j0rsa/bujo-bot:latest
