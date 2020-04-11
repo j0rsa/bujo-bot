@@ -192,7 +192,7 @@ object Markup {
                     listOf(
                         InlineKeyboardButton(
                             addHabitActionButton,
-                            callbackData = "$CALLBACK_ADD_HABIT_ACTION_BUTTON: ${habit.id?.value}"
+                            callbackData = "$CALLBACK_ADD_FAST_HABIT_ACTION_BUTTON: ${habit.id?.value}"
                         )
                     ),
                     listOf(

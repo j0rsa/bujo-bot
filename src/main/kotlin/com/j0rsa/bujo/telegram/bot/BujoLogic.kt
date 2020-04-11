@@ -249,6 +249,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                             Lines::habitRegisteredMessage,
                             habitCreatedMarkup(trackerUser.language, habitId)
                         )
+                        showHabits(bot, update)
                     })
                 userActors.remove(BotUserId(user))
             }
@@ -470,5 +471,3 @@ class HandleActorMessage(
     val chatId: ChatId,
     val text: String
 )
-
-private infix fun String.or(other: String) = if (Math.random() < 0.5) this else other
