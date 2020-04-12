@@ -54,7 +54,7 @@ class App: WithLogger() {
 					BujoLogic.createHabit(
 						bot,
 						ChatId(update.callbackQuery?.message ?: return@callbackQuery),
-						update.callbackQuery?.message?.from ?: return@callbackQuery
+						update.callbackQuery?.from ?: return@callbackQuery
 					) }
 				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(
 					bot,
@@ -93,7 +93,7 @@ class App: WithLogger() {
 					addValueCallback(
 						bot,
 						ChatId(message),
-						message.from ?: return@callbackQuery,
+						callbackQuery.from,
 						data
 					)
 				}
