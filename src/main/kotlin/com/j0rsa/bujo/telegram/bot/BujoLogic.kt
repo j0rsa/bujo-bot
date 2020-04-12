@@ -7,7 +7,6 @@ import arrow.fx.handleError
 import com.j0rsa.bujo.telegram.Config
 import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
-import com.j0rsa.bujo.telegram.actor.common.ContextualResult
 import com.j0rsa.bujo.telegram.actor.common.Localized
 import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.*
@@ -41,7 +40,7 @@ import kotlin.reflect.KProperty1
 
 @OptIn(ExperimentalCoroutinesApi::class)
 object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
-    internal val logger = LoggerFactory.getLogger(this::class.java.name)
+    private val logger = LoggerFactory.getLogger(this::class.java.name)
     private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
     fun checkBackendStatus(bot: Bot, message: Message) {
         val text = if (TrackerClient.health()) {
@@ -82,29 +81,25 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
-    fun registerTelegramUser(bot: Bot, update: Update) {
-        update.message?.let { message ->
-            message.from?.let {
+    fun registerTelegramUser(bot: Bot, chatId: ChatId, user: User) {
                 val (_, status) = TrackerClient.createUser(
                     CreateUserRequest(
-                        telegramId = it.id,
-                        firstName = it.firstName,
-                        lastName = it.lastName ?: "",
-                        language = it.languageCode ?: Config.app.defaultLanguage.toLowerCase()
+                        telegramId = user.id,
+                        firstName = user.firstName,
+                        lastName = user.lastName ?: "",
+                        language = user.languageCode ?: Config.app.defaultLanguage.toLowerCase()
                     )
                 )
                 val text = when (status) {
-                    Status.CREATED -> BujoTalk.withLanguage(it.languageCode).welcome
-                    Status.OK -> BujoTalk.withLanguage(it.languageCode).welcomeBack
-                    else -> BujoTalk.withLanguage(it.languageCode).genericError
+                    Status.CREATED -> BujoTalk.withLanguage(user.languageCode).welcome
+                    Status.OK -> BujoTalk.withLanguage(user.languageCode).welcomeBack
+                    else -> BujoTalk.withLanguage(user.languageCode).genericError
                 }
                 bot.sendMessage(
-                    message.chat.id,
+                    chatId.value,
                     text,
-                    replyMarkup = permanentMarkup(message.from?.languageCode)
+                    replyMarkup = permanentMarkup(user.languageCode)
                 )
-            }
-        }
     }
 
     fun handleUserActorSayMessage(
@@ -128,54 +123,46 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     }
 
     fun handleUserActorSkipMessage(
-        update: Update,
+        user: User,
         result: CompletableDeferred<Boolean> = CompletableDeferred()
     ) {
-        update.message?.let { message ->
-            message.from?.let { user ->
-                launch {
-                    val userId = BotUserId(user)
-                    userActors[userId]?.let { actorChannel ->
-                        if (!actorChannel.isClosedForSend) {
-                            actorChannel.send(ActorMessage.Skip(result))
-                        }
-                    }
+        launch {
+            val userId = BotUserId(user)
+            userActors[userId]?.let { actorChannel ->
+                if (!actorChannel.isClosedForSend) {
+                    actorChannel.send(ActorMessage.Skip(result))
                 }
             }
         }
     }
 
-    fun showHabits(bot: Bot, update: Update) {
-        update.message?.let { message ->
-            message.from?.let { user ->
-                IO.fx {
-                    val (trackerUser) = TrackerClient.getUser(BotUserId(user.id))
-                    val (habits) = TrackerClient.getHabits(trackerUser.id)
-                    with(BujoTalk.withLanguage(user.languageCode)) {
-                        if (habits.isEmpty()) {
-                            bot.sendMessage(
-                                message.chat.id,
-                                text = noHabitsRegistered,
-                                replyMarkup = newHabitMarkup(user.languageCode)
-                            )
-                        } else {
-                            bot.sendMessage(
-                                message.chat.id,
-                                text = showHabitsMessage,
-                                replyMarkup = habitListMarkup(habits)
-                            )
-                        }
-                    }
-                }.handleError {
-                    logger.error("IO error: $it")
-                    BujoBot(bot).sendGenericError(ChatId(message), user.languageCode)
-                }.unsafeRunSync()
+    fun showHabits(bot: Bot, chatId: ChatId, user: User) {
+        IO.fx {
+            val (trackerUser) = TrackerClient.getUser(BotUserId(user.id))
+            val (habits) = TrackerClient.getHabits(trackerUser.id)
+            with(BujoTalk.withLanguage(user.languageCode)) {
+                if (habits.isEmpty()) {
+                    bot.sendMessage(
+                        chatId.value,
+                        text = noHabitsRegistered,
+                        replyMarkup = newHabitMarkup(user.languageCode)
+                    )
+                } else {
+                    bot.sendMessage(
+                        chatId.value,
+                        text = showHabitsMessage,
+                        replyMarkup = habitListMarkup(habits)
+                    )
+                }
             }
-        }
+        }.handleError {
+            logger.error("IO error: $it")
+            BujoBot(bot).sendGenericError(chatId, user.languageCode)
+        }.unsafeRunSync()
     }
 
-    fun createAction(bot: Bot, update: Update) =
-        initNewActor(BujoBot(bot), update) { user, trackerUser, _, ctx ->
+    fun createAction(bot: Bot, chatId: ChatId, user: User) =
+        initNewActor(BujoBot(bot), chatId, user) { trackerUser, ctx ->
             CreateActionActor.yield(
                 CreateActionState(ctx, trackerUser)
             ) {
@@ -198,9 +185,10 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
     fun addValue(
         callbackMessage: CallbackMessage,
-        update: Update
+        chatId: ChatId,
+        user: User
     ) {
-        initNewActor(callbackMessage.bot, update) { user, trackerUser, _, ctx ->
+        initNewActor(callbackMessage.bot, chatId, user) { trackerUser, ctx ->
             val actionId = ActionId(UUID.fromString(callbackMessage.callBackData))
             AddValueActor.yield(
                 AddValueState(
@@ -222,18 +210,16 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
-    fun showSettings(bot: Bot, update: Update) {
-        update.message?.let {
-            bot.sendMessage(
-                ChatId(it).value,
-                BujoTalk.withLanguage(it.from?.languageCode).settingsMessage,
-                replyMarkup = settingsMarkup(it.from?.languageCode)
-            )
-        }
+    fun showSettings(bot: Bot, chatId: ChatId, user: User) {
+        bot.sendMessage(
+            chatId.value,
+            BujoTalk.withLanguage(user.languageCode).settingsMessage,
+            replyMarkup = settingsMarkup(user.languageCode)
+        )
     }
 
-    fun createHabit(bot: Bot, update: Update) =
-        initNewActor(BujoBot(bot), update) { user, trackerUser, _, ctx ->
+    fun createHabit(bot: Bot, chatId: ChatId, user: User) =
+        initNewActor(BujoBot(bot), chatId, user) { trackerUser, ctx ->
             HabitActor.yield(
                 CreateHabitState(ctx, trackerUser)
             ) {
@@ -249,7 +235,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
                             Lines::habitRegisteredMessage,
                             habitCreatedMarkup(trackerUser.language, habitId)
                         )
-                        showHabits(bot, update)
+                        showHabits(bot, chatId, user)
                     })
                 userActors.remove(BotUserId(user))
             }
@@ -257,38 +243,33 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
     private fun initNewActor(
         bot: BujoBot,
-        update: Update,
-        init: (user: User, trackerUser: TrackerUser, message: Message, ctx: ActorContext) -> SendChannel<ActorMessage>?
+        chatId: ChatId,
+        user: User,
+        init: (trackerUser: TrackerUser, ctx: ActorContext) -> SendChannel<ActorMessage>?
     ) {
-        (update.message ?: update.callbackQuery?.message)?.let { message ->
-            (update.callbackQuery?.from ?: message.from)?.let { user: User ->
-                launch {
-                    val userId = BotUserId(user)
-                    userActors[userId]?.close()
-                    val actorContext = ActorContext(
-                        ChatId(message),
-                        BotUserId(user),
-                        bot, this
+        launch {
+            val userId = BotUserId(user)
+            userActors[userId]?.close()
+            val actorContext = ActorContext(
+                chatId,
+                BotUserId(user),
+                bot, this
+            )
+            actorContext.client.getUser(actorContext.userId)
+                .map { trackerUser ->
+                    val initResult = init(
+                        trackerUser,
+                        actorContext
                     )
-                    actorContext.client.getUser(actorContext.userId)
-                        .map { trackerUser ->
-                            val initResult = init(
-                                user,
-                                trackerUser,
-                                message,
-                                actorContext
-                            )
-                            if (initResult != null) {
-                                userActors[userId] = initResult
-                            }
-                        }
-                        .handleError {
-                            logger.error("IO error: $it")
-                            bot.sendGenericError(actorContext.chatId, user.languageCode)
-                        }.unsafeRunSync()
-
+                    if (initResult != null) {
+                        userActors[userId] = initResult
+                    }
                 }
-            }
+                .handleError {
+                    logger.error("IO error: $it")
+                    bot.sendGenericError(chatId, user.languageCode)
+                }.unsafeRunSync()
+
         }
     }
 
@@ -389,20 +370,29 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         }
     }
 
-    fun addFastHabitActionFromQuery(bot: Bot, update: Update, habitId: UUID) {
+    fun addFastHabitActionFromQuery(bot: Bot, chatId: ChatId, user: User, habitId: UUID) {
         val habitIdObject = HabitId(habitId)
-        initNewActor(BujoBot(bot), update) { user, trackerUser, _, ctx ->
+        initNewActor(BujoBot(bot), chatId, user) { trackerUser, ctx ->
             IO.fx {
                 val (habitInfo) = TrackerClient.getHabit(trackerUser.id, habitIdObject)
                 val habit = habitInfo.habit
                 if (habit.values.isEmpty()) {
-                    createHabitActionWithMessage(ctx, trackerUser, habitIdObject, habit, bot, update, emptyList())
+                    createHabitActionWithMessage(ctx, trackerUser, habitIdObject, habit, bot, chatId, user, emptyList())
                     null
                 } else
                     AddFastValueListActor.yield(
                         AddFastValueListState(ctx, trackerUser, habit.values)
                     ) {
-                        cause ?: createHabitActionWithMessage(ctx, trackerUser, habitIdObject, habit, bot, update, result)
+                        cause ?: createHabitActionWithMessage(
+                            ctx,
+                            trackerUser,
+                            habitIdObject,
+                            habit,
+                            bot,
+                            chatId,
+                            user,
+                            result
+                        )
                         userActors.remove(BotUserId(user))
                     }
             }.handleError {
@@ -418,10 +408,11 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         habitIdObject: HabitId,
         habit: Habit,
         bot: Bot,
-        update: Update,
+        chatId: ChatId,
+        user: User,
         result: List<Value>
     ) {
-        val a = object :Localized {
+        val a = object : Localized {
             override fun context(): ActorContext = ctx
             override fun trackerUser(): TrackerUser = trackerUser
         }
@@ -437,7 +428,7 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
             },
             {
                 a.sendLocalizedMessage(Lines::actionRegisteredMessage)
-                showHabits(bot, update)
+                showHabits(bot, chatId, user)
             })
     }
 
@@ -453,17 +444,13 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
 sealed class BotMessage(
     val bot: BujoBot,
-    private val chatId: ChatId,
     private val userId: BotUserId
 ) {
     class CallbackMessage(
         bot: BujoBot,
         userId: BotUserId,
-        chatId: ChatId,
         val callBackData: String
-    ) : BotMessage(bot, chatId, userId)
-
-    fun toContext(scope: CoroutineScope) = ActorContext(chatId, userId, bot, scope)
+    ) : BotMessage(bot, userId)
 }
 
 class HandleActorMessage(

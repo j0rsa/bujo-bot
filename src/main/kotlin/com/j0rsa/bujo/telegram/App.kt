@@ -15,6 +15,7 @@ import me.ivmg.telegram.dispatcher.message
 import me.ivmg.telegram.entities.CallbackQuery
 import me.ivmg.telegram.entities.Message
 import me.ivmg.telegram.entities.Update
+import me.ivmg.telegram.entities.User
 import me.ivmg.telegram.extensions.filters.Filter
 import okhttp3.logging.HttpLoggingInterceptor
 import org.slf4j.LoggerFactory
@@ -32,19 +33,53 @@ class App {
 			token = Config.app.token
 			logLevel = HttpLoggingInterceptor.Level.valueOf(Config.app.sdkLoggingLevel)
 			dispatch {
-				command("start") { bot, update -> BujoLogic.registerTelegramUser(bot, update) }
-				command("habits") { bot, update -> BujoLogic.showHabits(bot, update) }
-				command("skip") { _, update -> handleUserActorSkipMessage(update) }
-				message(CreateHabitButtonFilter) { bot, update -> BujoLogic.createHabit(bot, update) }
-				callbackQuery(CALLBACK_CREATE_HABIT_BUTTON) { bot, update -> BujoLogic.createHabit(bot, update) }
-				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(bot, update) }
-				message(CreateActionButtonFilter) { bot, update -> BujoLogic.createAction(bot, update) }
-				message(SettingsButtonFilter) { bot, update -> BujoLogic.showSettings(bot, update) }
+				command("start") { bot, update ->
+					BujoLogic.registerTelegramUser(
+						bot,
+						ChatId(update.message ?: return@command),
+						update.message?.from ?: return@command
+					) }
+				command("skip") { _, update ->
+					handleUserActorSkipMessage(update.message?.from ?: return@command) }
+				command("habits") { bot, update ->
+					BujoLogic.showHabits(
+						bot,
+						ChatId(update.message ?: return@command),
+						update.message?.from ?: return@command
+					) }
+				message(CreateHabitButtonFilter) { bot, update ->
+					BujoLogic.createHabit(
+						bot,
+						ChatId(update.message ?: return@message),
+						update.message?.from ?: return@message
+					) }
+				callbackQuery(CALLBACK_CREATE_HABIT_BUTTON) { bot, update ->
+					BujoLogic.createHabit(
+						bot,
+						ChatId(update.callbackQuery?.message ?: return@callbackQuery),
+						update.callbackQuery?.message?.from ?: return@callbackQuery
+					) }
+				message(ShowHabitsButtonFilter) { bot, update -> BujoLogic.showHabits(
+					bot,
+					ChatId(update.message ?: return@message),
+					update.message?.from ?: return@message
+				) }
+				message(CreateActionButtonFilter) { bot, update ->
+					BujoLogic.createAction(
+						bot,
+						ChatId(update.message ?: return@message),
+						update.message?.from ?: return@message
+					) }
+				message(SettingsButtonFilter) { bot, update ->
+					BujoLogic.showSettings(
+						bot,
+						ChatId(update.message ?: return@message),
+						update.message?.from ?: return@message
+					) }
 				message(Filter.Text and notTextButton()) { _, update ->
 					val message = update.message ?: return@message
 					val userId = BotUserId(message.from ?: return@message)
 					val text = message.text ?: return@message
-
 					handleUserActorSayMessage(
 						HandleActorMessage(userId, ChatId(message), text)
 					)
@@ -57,7 +92,13 @@ class App {
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					val message = callbackQuery.message ?: return@callbackQuery
 					deleteMessage(bot, message)
-					addValueCallback(callbackQuery, update, bot)
+					val data = parse(callbackQuery.data, CALLBACK_ADD_VALUE)
+					addValueCallback(
+						bot,
+						ChatId(message),
+						message.from ?: return@callbackQuery,
+						data
+					)
 				}
 				callbackQuery(CALLBACK_ACTOR_TEMPLATE) { bot, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
@@ -100,7 +141,12 @@ class App {
 					val message = callbackQuery.message ?: return@callbackQuery
 					val habitId = parse(callbackQuery.data, CALLBACK_ADD_FAST_HABIT_ACTION_BUTTON)
 					deleteMessage(bot, message)
-					BujoLogic.addFastHabitActionFromQuery(bot, update, UUID.fromString(habitId))
+					BujoLogic.addFastHabitActionFromQuery(
+						bot,
+						ChatId(message),
+						message.from ?: return@callbackQuery,
+						UUID.fromString(habitId)
+					)
 				}
 //				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
 //					val callbackQuery = update.callbackQuery ?: return@callbackQuery
@@ -144,18 +190,15 @@ class App {
 			bot.deleteMessage(message.chat.id, message.messageId)
 		}
 
-		private fun addValueCallback(callbackQuery: CallbackQuery, update: Update, bot: Bot) {
-			val userId = BotUserId(callbackQuery.from)
-			val data = parse(callbackQuery.data, CALLBACK_ADD_VALUE)
-
+		private fun addValueCallback(bot: Bot, chatId: ChatId, user: User, data: String) {
 			addValue(
 				CallbackMessage(
 					BujoBot(bot),
-					userId,
-					ChatId(update.message?.chat?.id ?: 0L),
+					BotUserId(user),
 					data
 				),
-				update
+				chatId,
+				user
 			)
 		}
 
