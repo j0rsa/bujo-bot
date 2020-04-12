@@ -16,6 +16,7 @@ object ErrorResponseInterceptor : Interceptor, WithLogger() {
             logger.error(
                 """
                 Received error response for ${response.request.url} with code ${response.code}
+                Request body: ${(request.body)}
                 Headers: ${response.headers}
                 Body: $body
             """.trimIndent()
