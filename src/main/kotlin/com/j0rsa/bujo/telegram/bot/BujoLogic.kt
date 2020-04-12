@@ -5,6 +5,7 @@ import arrow.fx.extensions.fx
 import arrow.fx.extensions.toIO
 import arrow.fx.handleError
 import com.j0rsa.bujo.telegram.Config
+import com.j0rsa.bujo.telegram.WithLogger
 import com.j0rsa.bujo.telegram.actor.*
 import com.j0rsa.bujo.telegram.actor.common.ActorMessage
 import com.j0rsa.bujo.telegram.actor.common.Localized
@@ -39,8 +40,7 @@ import kotlin.reflect.KProperty1
  */
 
 @OptIn(ExperimentalCoroutinesApi::class)
-object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default) {
-    private val logger = LoggerFactory.getLogger(this::class.java.name)
+object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default), WithLogger() {
     private val userActors = mutableMapOf<BotUserId, SendChannel<ActorMessage>>()
     fun checkBackendStatus(bot: Bot, message: Message) {
         val text = if (TrackerClient.health()) {

@@ -14,11 +14,9 @@ import me.ivmg.telegram.dispatcher.command
 import me.ivmg.telegram.dispatcher.message
 import me.ivmg.telegram.entities.CallbackQuery
 import me.ivmg.telegram.entities.Message
-import me.ivmg.telegram.entities.Update
 import me.ivmg.telegram.entities.User
 import me.ivmg.telegram.extensions.filters.Filter
 import okhttp3.logging.HttpLoggingInterceptor
-import org.slf4j.LoggerFactory
 import java.util.*
 
 /**
@@ -26,8 +24,7 @@ import java.util.*
  * @since 02.02.20
  */
 
-class App {
-	private val logger = LoggerFactory.getLogger(this::class.java.name)
+class App: WithLogger() {
 	fun run() {
 		val bot = bot {
 			token = Config.app.token

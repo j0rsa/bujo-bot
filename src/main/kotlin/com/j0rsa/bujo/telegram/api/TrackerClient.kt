@@ -7,6 +7,7 @@ import arrow.core.right
 import arrow.fx.IO
 import arrow.fx.extensions.toIO
 import com.j0rsa.bujo.telegram.Config
+import com.j0rsa.bujo.telegram.WithLogger
 import com.j0rsa.bujo.telegram.api.RequestLens.actionIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionRequestLens
@@ -29,15 +30,13 @@ import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Status
 import org.http4k.core.Uri
-import org.slf4j.LoggerFactory.getLogger
 
 /**
  * @author red
  * @since 02.02.20
  */
 
-object TrackerClient : Client {
-    private val logger = getLogger(this::class.java.name)
+object TrackerClient : Client, WithLogger() {
     private var httpLogging = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
         override fun log(message: String) {
             logger.debug(message)
@@ -49,7 +48,7 @@ object TrackerClient : Client {
         OkHttpClient.Builder()
             .followRedirects(false)
             .addInterceptor(httpLogging)
-
+            .addInterceptor(ErrorResponseInterceptor)
             .build()
     )
 

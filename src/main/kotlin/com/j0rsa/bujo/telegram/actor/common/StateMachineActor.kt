@@ -1,5 +1,6 @@
 package com.j0rsa.bujo.telegram.actor.common
 
+import com.j0rsa.bujo.telegram.WithLogger
 import com.j0rsa.bujo.telegram.api.model.TrackerUser
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import com.j0rsa.bujo.telegram.bot.i18n.Lines
@@ -10,7 +11,6 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.selects.SelectClause2
 import me.ivmg.telegram.entities.ReplyMarkup
-import org.slf4j.LoggerFactory
 import kotlin.reflect.KProperty1
 
 /**
@@ -21,9 +21,7 @@ import kotlin.reflect.KProperty1
 open class StateMachineActor<T : ActorState, OUT>(
     private val onComplete: T.() -> OUT,
     private vararg val steps: ActorStep<T>
-) : Actor<T, OUT> {
-    private val logger = LoggerFactory.getLogger(this::class.java.name)
-
+) : Actor<T, OUT>, WithLogger() {
     @OptIn(ObsoleteCoroutinesApi::class)
     override fun yield(
         state: T,
@@ -89,8 +87,7 @@ data class ContextualResult<OUT>(
     private val trackerUser: TrackerUser,
     val result: OUT,
     val cause: Throwable?
-) : Localized {
-    internal val logger = LoggerFactory.getLogger(this::class.java.name)
+) : Localized, WithLogger() {
     override fun context(): ActorContext = ctx
     override fun trackerUser(): TrackerUser = trackerUser
 }
@@ -145,8 +142,7 @@ object DummyChannel : SendChannel<ActorMessage> {
 sealed class ActorStep<in T : ActorState>(
     private val setup: StepSetupDefinition<T>.() -> Boolean,
     private val action: suspend StepActionDefinition<T>.() -> Boolean
-) {
-    private val logger = LoggerFactory.getLogger(this::class.java.name)
+): WithLogger() {
     fun init(state: T): Boolean = setup(StepSetupDefinition(state))
     suspend operator fun invoke(state: T, message: ActorMessage.Say = ActorMessage.Say("")): Boolean =
         action(StepActionDefinition(state, message))
@@ -176,8 +172,7 @@ fun <T : ActorState> mandatoryStep(
 ) =
     MandatoryStep(setup, action)
 
-abstract class Step<out T : ActorState>(private val state: T) : Localized {
-    val logger = LoggerFactory.getLogger(this::class.java.name)
+abstract class Step<out T : ActorState>(private val state: T) : Localized, WithLogger() {
     override fun context(): ActorContext = state.ctx
     override fun trackerUser(): TrackerUser = state.trackerUser
 }
