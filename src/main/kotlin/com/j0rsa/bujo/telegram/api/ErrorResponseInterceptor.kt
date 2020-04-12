@@ -13,7 +13,7 @@ object ErrorResponseInterceptor: Interceptor, WithLogger() {
             logger.error("""
                 Received error response for ${response.request.url} with code ${response.code}
                 Headers: ${response.headers}
-                Body: ${response.body}
+                Body: ${response.body?.byteString()}
             """.trimIndent())
         }
         return response
