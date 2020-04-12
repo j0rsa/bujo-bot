@@ -141,7 +141,7 @@ class App: WithLogger() {
 					BujoLogic.addFastHabitActionFromQuery(
 						bot,
 						ChatId(message),
-						message.from ?: return@callbackQuery,
+						callbackQuery.from,
 						UUID.fromString(habitId)
 					)
 				}
