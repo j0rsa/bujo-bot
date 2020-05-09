@@ -39,3 +39,6 @@ spec:
                 name: bujo-bot-config
             - secretRef:
                 name: bujo-bot-secrets
+          resources:
+            limits:
+              memory: "50Mi"
