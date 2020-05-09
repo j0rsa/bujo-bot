@@ -1,5 +1,7 @@
 ## Bujo Bot
 
+![CI](https://github.com/j0rsa/bujo-bot/workflows/CI/badge.svg)
+
 This is the Telegram bot to have interaction with its Backend which you can hind here:
 https://github.com/j0rsa/bujo-tracker
 
