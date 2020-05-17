@@ -63,5 +63,10 @@ data class Lines(
     val sureThatWantToDeleteTheHabit: String,
     val habitDeletedMessage: String,
     val habitNotDeletedMessage: String,
-    val whatIsYourMessage: String
+    val whatIsYourMessage: String,
+    val showActionsButton: String,
+    val actionsForHabitMessage: String,
+    val dateMessage: String,
+    val noActionsThisDayMessage: String,
+    val toToday: String
 )

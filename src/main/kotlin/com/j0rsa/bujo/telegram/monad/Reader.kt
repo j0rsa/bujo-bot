@@ -7,6 +7,7 @@ import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.bot.*
 import kotlinx.coroutines.CoroutineScope
 import org.http4k.core.Status
+import java.time.LocalDate
 
 /**
  * @author red
@@ -53,4 +54,5 @@ interface Client {
 		habitId: HabitId,
 		actionRequest: HabitActionRequest
 	): Either<BotError, ActionId>
+	fun getHabitActions(userId: UserId, habitId: HabitId, date: LocalDate): Either<BotError, List<Action>>
 }

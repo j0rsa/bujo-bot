@@ -1,5 +1,7 @@
 package com.j0rsa.bujo.telegram.bot
 
+import arrow.core.Either
+import arrow.core.right
 import arrow.fx.IO
 import arrow.fx.extensions.fx
 import arrow.fx.extensions.toIO
@@ -13,6 +15,7 @@ import com.j0rsa.bujo.telegram.api.TrackerClient
 import com.j0rsa.bujo.telegram.api.model.*
 import com.j0rsa.bujo.telegram.bot.BotMessage.CallbackMessage
 import com.j0rsa.bujo.telegram.bot.Markup.createdActionMarkup
+import com.j0rsa.bujo.telegram.bot.Markup.datesPages
 import com.j0rsa.bujo.telegram.bot.Markup.habitCreatedMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.habitListMarkup
 import com.j0rsa.bujo.telegram.bot.Markup.habitMarkup
@@ -29,8 +32,9 @@ import kotlinx.coroutines.channels.SendChannel
 import me.ivmg.telegram.Bot
 import me.ivmg.telegram.entities.*
 import org.http4k.core.Status
-import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.reflect.KProperty1
 
@@ -432,6 +436,48 @@ object BujoLogic : CoroutineScope by CoroutineScope(Dispatchers.Default), WithLo
             })
     }
 
+    fun showActions(bot: Bot, chatId: ChatId, user: User, habitId: UUID, date: LocalDate) {
+        val languageCode = user.languageCode
+        with(BujoTalk.withLanguage(languageCode)) {
+            IO.fx {
+                val trackerUser = !TrackerClient.getUser(BotUserId(user))
+                val habitIdObject = HabitId(habitId)
+                val habitInfo = !TrackerClient.getHabit(trackerUser.id, habitIdObject)
+                when(val actions = TrackerClient.getHabitActions(trackerUser.id, habitIdObject, date)) {
+                    is Either.Right -> bot.sendMessage(
+                        chatId.value,
+                        actionsForHabitMessage.format("**${habitInfo.habit.name}**")+ "\n" +
+                        dateMessage.format(date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))) + "\n" +
+                        actionsToMessage(actions.b, languageCode),
+                        parseMode = ParseMode.MARKDOWN,
+                        replyMarkup = datesPages(date, "$CALLBACK_SHOW_ACTIONS_BUTTON:$habitId:", languageCode)
+                    ).right()
+                    is Either.Left -> when(actions.a) {
+                        is NotFound -> bot.sendMessage(
+                            chatId.value,
+                            noActionsThisDayMessage,
+                            parseMode = ParseMode.MARKDOWN,
+                            replyMarkup = datesPages(date, "$CALLBACK_SHOW_ACTIONS_BUTTON:$habitId:", languageCode)
+                        ).right()
+                        else -> actions
+                    }
+                }
+            }.handleError {
+                logger.error("IO error: $it")
+                bot.sendMessage(
+                    chatId.value,
+                    habitNotDeletedMessage
+                )
+            }.unsafeRunSync()
+        }
+    }
+
+    private fun actionsToMessage(actions: List<Action>, languageCode: String?): String {
+        val lines = BujoTalk.withLanguage(languageCode)
+        return actions.joinToString("\n") {
+            it.values.joinToString(separator = ", ") { "${it.type.caption.get(lines)} ${it.value ?: ""}" }
+        }
+    }
 //	fun editAction(message: CallbackMessage) {
 //		launch {
 //			val actorMessage = ActorMessage.Say(message.callBackData)

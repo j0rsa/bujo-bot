@@ -18,6 +18,7 @@ object RequestLens {
     val tagLens = Gson.autoBody<Tag>().toLens()
     val tagsLens = Gson.autoBody<List<Tag>>().toLens()
     val actionLens = Gson.autoBody<Action>().toLens().toEither()
+    val actionsLens = Gson.autoBody<List<Action>>().toLens().toEither()
     val actionIdLens = Gson.autoBody<ActionId>().toLens().toEither()
     val actionRequestLens = Gson.autoBody<ActionRequest>().toLens()
     val habitActionRequestLens = Gson.autoBody<HabitActionRequest>().toLens()

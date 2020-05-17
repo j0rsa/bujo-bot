@@ -17,6 +17,7 @@ import me.ivmg.telegram.entities.Message
 import me.ivmg.telegram.entities.User
 import me.ivmg.telegram.extensions.filters.Filter
 import okhttp3.logging.HttpLoggingInterceptor
+import java.time.LocalDate
 import java.util.*
 
 /**
@@ -81,6 +82,7 @@ class App: WithLogger() {
 						HandleActorMessage(userId, ChatId(message), text)
 					)
 				}
+				// catch all callbacks and log them
 				callbackQuery("") { _, update ->
 					val callbackQuery = update.callbackQuery ?: return@callbackQuery
 					logger.debug("Received callback: ${callbackQuery.data}")
@@ -143,6 +145,18 @@ class App: WithLogger() {
 						ChatId(message),
 						callbackQuery.from,
 						UUID.fromString(habitId)
+					)
+				}
+				callbackQuery(CALLBACK_SHOW_ACTIONS_BUTTON) {bot, update ->
+					val callbackQuery = update.callbackQuery ?: return@callbackQuery
+					val message = callbackQuery.message ?: return@callbackQuery
+					val (habitId,date) = parseTwoValues(callbackQuery.data)
+					BujoLogic.showActions(
+						bot,
+						ChatId(message),
+						callbackQuery.from,
+						UUID.fromString(habitId),
+						LocalDate.parse(date)
 					)
 				}
 //				callbackQuery(CALLBACK_VIEW_ACTION) { bot, update ->
@@ -228,5 +242,10 @@ class App: WithLogger() {
 		}
 
 		private fun parse(text: String, template: String): String = text.substringAfter("$template:").trim()
+
+		private fun parseTwoValues(text: String, delimiter: String = ":"): Pair<String, String> {
+			val parts = text.split(delimiter).drop(1).take(2);
+			return parts.component1() to parts.component2()
+		}
 	}
 }

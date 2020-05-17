@@ -1,11 +1,12 @@
 package com.j0rsa.bujo.telegram.bot
 
 import com.j0rsa.bujo.telegram.api.model.*
-import com.j0rsa.bujo.telegram.bot.Markup.toHabitsInlineKeys
 import com.j0rsa.bujo.telegram.bot.i18n.BujoTalk
 import me.ivmg.telegram.entities.*
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * @author red
@@ -197,6 +198,12 @@ object Markup {
                     ),
                     listOf(
                         InlineKeyboardButton(
+                            showActionsButton,
+                            callbackData = "$CALLBACK_SHOW_ACTIONS_BUTTON:${habit.id?.value}:${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}"
+                        )
+                    ),
+                    listOf(
+                        InlineKeyboardButton(
                             deleteButton,
                             callbackData = "$CALLBACK_CONFIRM_DELETE_HABIT: ${habit.id?.value}"
                         )
@@ -234,6 +241,28 @@ object Markup {
                 InlineKeyboardButton(habitCaption, callbackData = "$CALLBACK_VIEW_HABIT: ${habit.id?.value}")
             )
         }
+
+    fun datesPages(date: LocalDate, callbackPrefix: String, languageCode: String?): InlineKeyboardMarkup {
+        val buttons = listOf(
+            listOfNotNull(
+                if(date != LocalDate.now()) InlineKeyboardButton(
+                    BujoTalk.withLanguage(languageCode).toToday,
+                    callbackData = "$callbackPrefix:${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}"
+                ) else null
+            ),
+            listOfNotNull(
+                InlineKeyboardButton(
+                    "<<",
+                    callbackData = "$callbackPrefix:${date.minusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE)}"
+                ),
+                if(date != LocalDate.now()) InlineKeyboardButton(
+                    ">>",
+                    callbackData = "$callbackPrefix:${date.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE)}"
+                ) else null
+            )
+        ).filterNot { it.isEmpty() }
+        return InlineKeyboardMarkup(buttons)
+    }
 
     private const val TODO_TEMPLATE = "todo"
 }

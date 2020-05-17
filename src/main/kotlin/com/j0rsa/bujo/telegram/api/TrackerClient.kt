@@ -11,6 +11,7 @@ import com.j0rsa.bujo.telegram.WithLogger
 import com.j0rsa.bujo.telegram.api.RequestLens.actionIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionLens
 import com.j0rsa.bujo.telegram.api.RequestLens.actionRequestLens
+import com.j0rsa.bujo.telegram.api.RequestLens.actionsLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitActionRequestLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitIdLens
 import com.j0rsa.bujo.telegram.api.RequestLens.habitInfoLens
@@ -30,6 +31,9 @@ import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Status
 import org.http4k.core.Uri
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
 
 /**
  * @author red
@@ -110,6 +114,18 @@ object TrackerClient : Client, WithLogger() {
         val response = client("/actions/${actionId.value}".get().with(userId))
         return when (response.status) {
             Status.OK -> actionLens(response).toBotEither().right()
+            Status.NOT_FOUND -> Either.Left(NotFound)
+            else -> Either.Left(NotCreated)
+        }.flatten()
+    }
+
+    private val actionDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+    override fun getHabitActions(userId: UserId, habitId: HabitId, date: LocalDate): Either<BotError, List<Action>> {
+        val response = client("/actions/".get().with(userId)
+            .query("habit", habitId.value.toString()).query("date", date.format(actionDateFormatter)))
+        return when (response.status) {
+            Status.OK -> actionsLens(response).toBotEither().right()
             Status.NOT_FOUND -> Either.Left(NotFound)
             else -> Either.Left(NotCreated)
         }.flatten()
